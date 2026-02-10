@@ -91,7 +91,7 @@ with tab2:
 # TAB 3
 with tab3:
 
-    st.subheader("Predict ML Grade")
+    st.subheader("Predict SM-2 Grade")
 
     feature_names = list(model.feature_names_in_)
 

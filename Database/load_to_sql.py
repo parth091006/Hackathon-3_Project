@@ -15,9 +15,7 @@ print("Writing database to:", db_path)
 # Load + store data
 try:
     df = pd.read_csv(csv_path)
-
     conn = sqlite3.connect(db_path)
-
     df.to_sql("student_grades", conn, if_exists="replace", index=False)
 
     print("\nData successfully stored in SQL database!")

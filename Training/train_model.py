@@ -32,7 +32,6 @@ expected_columns = [
     "Python-2",
     "SM-1",
     "SM-2",
-    "ML-1"
 ]
 
 # Drop roll number if present
@@ -51,11 +50,15 @@ if set(expected_columns) != set(df.columns):
 df = df[expected_columns]
 
 print("\nTarget distribution:")
-print(df["ML-1"].value_counts())
+print(df["SM-2"].value_counts())
 
 # FEATURES & TARGET
-X = df.iloc[:, :-1]
-y = df.iloc[:, -1]
+target_column = "SM-2"
+
+X = df.drop(columns=[target_column])
+y = df[target_column]
+
+print("\nTraining target:", target_column)
 
 # TRAIN / TEST SPLIT
 try:
@@ -76,7 +79,6 @@ models = {
         RandomForestClassifier(class_weight="balanced")
 }
 
-
 print("\nMODEL EVALUATION\n")
 
 best_model = None
@@ -95,26 +97,7 @@ for name, model in models.items():
     print("Accuracy:", accuracy)
     print(classification_report(y_test, predictions))
 
-    # Confusion matrix
-    ConfusionMatrixDisplay.from_predictions(y_test, predictions)
-    plt.title(f"{name} Confusion Matrix")
-    plt.show()
-
-    # Feature importance (RF only)
-    if name == "Random Forest":
-
-        importance = model.feature_importances_
-
-        plt.figure(figsize=(8, 5))
-        plt.bar(X.columns, importance)
-        plt.title("Feature Importance")
-        plt.xticks(rotation=45)
-        plt.show()
-
-    # Store results
-    results.append([name, accuracy])
-
-    # Track best model
+        # Track best model
     if accuracy > best_accuracy:
         best_accuracy = accuracy
         best_model = model
@@ -133,5 +116,3 @@ joblib.dump(best_model, model_path)
 
 print("\nBest model saved at:", model_path)
 print("Feature schema:", list(best_model.feature_names_in_))
-
-print("\nTRAINING COMPLETE")

@@ -11,7 +11,6 @@ print("Using database:", db_path)
 # Database connection
 try:
     conn = sqlite3.connect(db_path)
-
     df = pd.read_sql_query("SELECT * FROM student_grades", conn)
 
     print("\nData loaded successfully!")
@@ -25,6 +24,3 @@ except Exception as e:
 finally:
     if 'conn' in locals():
         conn.close()
-
-if df.empty:
-    print("Warning: Table is empty!")
