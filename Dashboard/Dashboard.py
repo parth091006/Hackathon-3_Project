@@ -38,7 +38,7 @@ if "Roll No." in df.columns:
 
 model = joblib.load(model_path)
 
-# RAW dataset (for analytics)
+# RAW dataset
 X_raw = df.iloc[:, :-1]
 y = df.iloc[:, -1]
 
@@ -150,7 +150,6 @@ with tab3:
 
         # Show grade instead of number
         st.success(f"Predicted Grade: {predicted_grade}")
-
 
 # TAB 4
 with tab4:

@@ -24,7 +24,7 @@ conn.close()
 
 print("\nDataset shape:", df.shape)
 
-# SCHEMA ENFORCEMENT (VERY IMPORTANT)
+# SCHEMA
 expected_columns = [
     "Calculus-1",
     "Calculus-2",
@@ -34,7 +34,7 @@ expected_columns = [
     "SM-2",
 ]
 
-# Drop roll number if present
+# Drop roll number
 if "Roll No." in df.columns:
     df = df.drop(columns=["Roll No."])
 
@@ -46,7 +46,6 @@ if set(expected_columns) != set(df.columns):
         f"Found: {df.columns.tolist()}"
     )
 
-# Force correct column order
 df = df[expected_columns]
 
 print("\nTarget distribution:")
@@ -60,7 +59,7 @@ y = df[target_column]
 
 print("\nTraining target:", target_column)
 
-# TRAIN / TEST SPLIT
+# TRAIN and TEST SPLIT
 try:
     X_train, X_test, y_train, y_test = train_test_split( X, y, test_size=0.2, random_state=42, stratify=y)
 except:
@@ -108,7 +107,7 @@ results_df = pd.DataFrame(results, columns=["Model", "Accuracy"])
 print("\nModel Comparison:")
 print(results_df)
 
-# Save model + feature names
+# Save model
 best_model.feature_names_in_ = X.columns
 
 model_path = os.path.join(script_dir, "best_model.pkl")
