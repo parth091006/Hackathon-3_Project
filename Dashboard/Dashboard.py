@@ -16,45 +16,17 @@ from reportlab.lib.enums import TA_CENTER
 
 # Plotly for interactive charts
 import plotly.graph_objects as go
-import plotly.express as px
-import plotly.io as pio
 
 # PAGE CONFIGURATION
-
 st.set_page_config(
     page_title="Student Grade Prediction Dashboard",
-    # page_icon="🎓",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
 # CUSTOM CSS STYLING
-
 st.markdown("""
 <style>
-    /* Main header styling */
-    .main-header {
-        text-align: center;
-        padding: 2rem 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    }
-    
-    .main-header h1 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .main-header p {
-        font-size: 1.1rem;
-        opacity: 0.95;
-        margin-top: 0;
-    }
-    
     /* Phase section headers */
     .phase-header {
         background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
@@ -64,24 +36,6 @@ st.markdown("""
         font-size: 1.3rem;
         font-weight: 600;
         margin: 2rem 0 1rem 0;
-    }
-    
-    /* Input containers */
-    .input-container {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 12px;
-        border: 1px solid #e0e0e0;
-        margin: 1rem 0;
-    }
-    
-    /* Result cards */
-    .result-card {
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-        margin: 1.5rem 0;
     }
     
     /* Grade display */
@@ -135,24 +89,6 @@ st.markdown("""
         border: 1px solid #e0e0e0;
     }
     
-    /* Button styling */
-    .stButton > button {
-        width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-size: 1.1rem;
-        font-weight: 600;
-        border-radius: 10px;
-        transition: all 0.3s ease;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
-    }
-    
     /* Info boxes */
     .info-box {
         background: #e7f3ff;
@@ -160,6 +96,45 @@ st.markdown("""
         padding: 1rem;
         border-radius: 5px;
         margin: 1rem 0;
+    }
+    
+    /* Header spacing */
+    .main-header {
+        text-align: center;
+        padding: 2rem 0;
+        background: linear-gradient(135deg,#667eea,#764ba2);
+        border-radius: 12px;
+        margin: 40px auto 40px auto;
+        max-width: 1200px;
+        color: white;
+    }
+    
+    /* Strong CSS overrides */
+    .block-container {
+        max-width: 1100px;
+        margin: auto;
+    }
+    
+    label {
+        font-size: 15px !important;
+        font-weight: 600 !important;
+    }
+    
+    div[data-baseweb="input"] input {
+        height: 46px !important;
+        font-size: 16px !important;
+        padding: 10px 14px !important;
+    }
+    
+    h2 {
+        font-size: 28px !important;
+        font-weight: 700 !important;
+    }
+    
+    .stButton > button {
+        font-size: 16px !important;
+        padding: 10px 24px !important;
+        border-radius: 8px !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -222,11 +197,11 @@ def get_grade_color(grade):
 def get_difficulty_badge(std):
     """Get difficulty indicator based on standard deviation"""
     if std > 15:
-        return "🔴 Hard", "badge-hard"
+        return " Hard", "badge-hard"
     elif std > 10:
-        return "🟡 Medium", "badge-medium"
+        return " Medium", "badge-medium"
     else:
-        return "🟢 Easy", "badge-easy"
+        return " Easy", "badge-easy"
 
 # DATABASE FUNCTIONS
 
@@ -234,7 +209,7 @@ def get_difficulty_badge(std):
 def load_all_students_data(db_path):
     """Load entire student dataset from database for analysis"""
     if not os.path.exists(db_path):
-        st.error(f"❌ Database not found: {db_path}")
+        st.error(f" Database not found: {db_path}")
         st.info("Please run load_to_sql.py first to create the database.")
         return None
     
@@ -244,7 +219,7 @@ def load_all_students_data(db_path):
         conn.close()
         return df
     except Exception as e:
-        st.error(f"❌ Database error: {e}")
+        st.error(f" Database error: {e}")
         return None
 
 def calculate_class_stats(df):
@@ -263,16 +238,6 @@ def calculate_class_stats(df):
             }
     
     return stats
-
-def get_student_by_roll(df, roll_number):
-    """Fetch single student data by roll number"""
-    if df is None:
-        return None
-    
-    result = df[df['Roll No.'] == roll_number]
-    if not result.empty:
-        return result.iloc[0]
-    return None
 
 # MODEL FUNCTIONS
 
@@ -491,96 +456,54 @@ def generate_report_card_pdf(student_info, subject_marks, predicted_grade, confi
     buffer.seek(0)
     return buffer.getvalue()
 
-# MAIN APPLICATION
+# UI FUNCTIONS FOR 3-STEP WORKFLOW
 
-def main():
-    # Header
-    st.markdown("""
-    <div class="main-header">
-        <h1>🎓 Student Grade Prediction Dashboard</h1>
-        <p>Predict your expected SM-2 marks based on your previous subject performance</p>
-    </div>
-    """, unsafe_allow_html=True)
+def show_student_profile():
+    """Step 1: Student Profile Entry"""
+    # Fix Student Profile title
+    st.markdown(
+        "<h2 style='margin-top:30px;margin-bottom:25px;'>Student Profile</h2>",
+        unsafe_allow_html=True
+    )
     
-    # Initialize session state
-    if 'student_info' not in st.session_state:
-        st.session_state['student_info'] = {
-            'Name': '',
-            'Roll_Number': '',
-            'Branch': '',
-            'Year': ''
-        }
-    
-    if 'subject_marks' not in st.session_state:
-        st.session_state['subject_marks'] = {
-            'Calculus-1': 0,
-            'Calculus-2': 0,
-            'Python-1': 0,
-            'Python-2': 0,
-            'SM-1': 0
-        }
-    
-    if 'prediction_result' not in st.session_state:
-        st.session_state['prediction_result'] = None
-    
-    if 'all_students_data' not in st.session_state:
-        st.session_state['all_students_data'] = load_all_students_data(db_path)
-    
-    if 'class_statistics' not in st.session_state and st.session_state['all_students_data'] is not None:
-        st.session_state['class_statistics'] = calculate_class_stats(st.session_state['all_students_data'])
-    
-    # Load model
-    model = load_model()
-    if model is None:
-        st.stop()
-    
-    # PHASE 1: STUDENT PROFILE
-    
-    st.markdown('<div class="phase-header">Section-1: Student Profile</div>', unsafe_allow_html=True)
-    
+    # Clean two column form - no restrictive wrapper
     col1, col2 = st.columns(2)
     
     with col1:
-        Name = st.text_input("Full Name", value=st.session_state['student_info']['Name'], key='input_name')
-        Roll_Number = st.text_input("Roll Number", value=st.session_state['student_info']['Roll_Number'], key='input_roll')
+        name = st.text_input("Full Name", value=st.session_state['student_info']['Name'], key='input_name')
     
     with col2:
-        Branch = st.text_input("Branch", value=st.session_state['student_info']['Branch'], key='input_branch')
-        Year = st.text_input("Year of Study", value=st.session_state['student_info']['Year'], key='input_year')
+        roll = st.text_input("Roll Number", value=st.session_state['student_info']['Roll_Number'], key='input_roll')
     
-    # Update session state
-    st.session_state['student_info'].update({
-        'Name': Name,
-        'Roll_Number': Roll_Number,
-        'Branch': Branch,
-        'Year': Year
-    })
+    # Row 2: Branch | Year of Study
+    col3, col4 = st.columns(2)
     
-    # Auto-fill button
-    if st.button("🔍 Load My Data from Database", use_container_width=True):
-        if not Roll_Number:
-            st.warning("⚠️ Please enter your Roll Number first")
-        else:
-            with st.spinner("Searching database..."):
-                student_data = get_student_by_roll(st.session_state['all_students_data'], Roll_Number)
-                
-                if student_data is not None:
-                    # Auto-fill marks
-                    subjects = ["Calculus-1", "Calculus-2", "Python-1", "Python-2", "SM-1"]
-                    for subject in subjects:
-                        if subject in student_data:
-                            st.session_state['subject_marks'][subject] = float(student_data[subject])
-                    
-                    st.success(f"✅ Data loaded successfully for Roll No. {Roll_Number}!")
-                    st.info("📊 Subject marks have been auto-filled below")
-                    st.rerun()
-                else:
-                    st.error(f"❌ No data found for Roll No. {Roll_Number}")
-                    st.info("💡 You can still enter your marks manually")
+    with col3:
+        branch = st.text_input("Branch", value=st.session_state['student_info']['Branch'], key='input_branch')
     
-    # PHASE 2: MARKS ENTRY
-        
-    st.markdown('<div class="phase-header">Section-2: Subject Marks Entry</div>', unsafe_allow_html=True)
+    with col4:
+        year = st.text_input("Year of Study", value=st.session_state['student_info']['Year'], key='input_year')
+    
+    # Add spacing before button
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Centered Next button with proper styling
+    col1, col2, col3 = st.columns([1, 1, 1])
+    
+    with col2:
+        if st.button("Next →", use_container_width=True):
+            st.session_state['student_info'].update({
+                'Name': name,
+                'Roll_Number': roll,
+                'Branch': branch,
+                'Year': year
+            })
+            st.session_state.page = 2
+            st.rerun()
+
+def show_subject_marks():
+    """Step 2: Subject Marks Entry"""
+    st.markdown('<div class="phase-header">Step 2: Subject Marks Entry</div>', unsafe_allow_html=True)
     
     subjects = ["Calculus-1", "Calculus-2", "Python-1", "Python-2", "SM-1"]
     class_stats = st.session_state.get('class_statistics', {})
@@ -588,9 +511,10 @@ def main():
     # Create two columns for subject inputs
     col1, col2 = st.columns(2)
     
-    for i, subject in enumerate(subjects):
-        with col1 if i % 2 == 0 else col2:
-            # Subject input with class comparison
+    # Left column: Calculus-1, Python-1, SM-1
+    left_subjects = ["Calculus-1", "Python-1", "SM-1"]
+    for i, subject in enumerate(left_subjects):
+        with col1:
             marks = st.number_input(
                 subject,
                 min_value=0.0,
@@ -624,187 +548,195 @@ def main():
                 </div>
                 """, unsafe_allow_html=True)
     
-        # PREDICTION BUTTON
-        
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    if st.button("🎯 Predict My Grade", use_container_width=True, type="primary"):
-        if not Roll_Number:
-            st.error("❌ Please enter your Roll Number in Phase 1 before predicting")
-        else:
-            with st.spinner("🔮 Analyzing your performance and predicting grade..."):
-                try:
-                    # Prepare data for prediction
-                    pred_df = pd.DataFrame([st.session_state['subject_marks']])
-                    
-                    # Align with model features
-                    if hasattr(model, 'feature_names_in_'):
-                        pred_df = pred_df.reindex(columns=model.feature_names_in_, fill_value=0)
-                    
-                    # Make prediction
-                    prediction = model.predict(pred_df)[0]
-                    
-                    # Get confidence
-                    confidence = 0.0
-                    probabilities = None
-                    
-                    if hasattr(model, 'predict_proba'):
-                        try:
-                            proba = model.predict_proba(pred_df)[0]
-                            confidence = float(max(proba) * 100.0)
-                            probabilities = {
-                                str(label): float(prob * 100.0)
-                                for label, prob in zip(model.classes_, proba)
-                            }
-                        except:
-                            pass
-                    
-                    # Store result
-                    st.session_state['prediction_result'] = {
-                        'predicted_grade': str(prediction),
-                        'confidence': confidence,
-                        'probabilities': probabilities,
-                        'timestamp': datetime.now().isoformat()
-                    }
-                    
-                    st.success("✅ Prediction complete!")
-                    st.rerun()
-                    
-                except Exception as e:
-                    st.error(f"❌ Prediction failed: {e}")
-                    st.info("💡 Please check your inputs and try again")
-    
-        # PHASE 3: PREDICTION RESULTS
-        
-    if st.session_state.get('prediction_result'):
-        st.markdown('<div class="phase-header">Section-3: Prediction Results</div>', unsafe_allow_html=True)
-        
-        result = st.session_state['prediction_result']
-        predicted_grade = result['predicted_grade']
-        confidence = result.get('confidence', 0.0)
-        grade_color = get_grade_color(predicted_grade)
-        
-        # Large grade display
-        col1, col2, col3 = st.columns([1, 2, 1])
+    # Right column: Calculus-2, Python-2
+    right_subjects = ["Calculus-2", "Python-2"]
+    for i, subject in enumerate(right_subjects):
         with col2:
-            st.markdown(f"""
-            <div style='text-align: center; padding: 50px 40px;
-                        background: linear-gradient(135deg, {grade_color}20 0%, {grade_color}10 100%);
-                        border-radius: 20px; border: 4px solid {grade_color};
-                        margin: 20px 0;'>
-                <div class='grade-display' style='color: {grade_color};'>{predicted_grade}</div>
-                <p style='font-size: 26px; color: #666; margin: 10px 0;'>
-                    {get_grade_range(predicted_grade)} marks
-                </p>
-                <p style='font-size: 20px; color: #999;'>
-                    Confidence: <strong>{confidence:.1f}%</strong>
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Performance Comparison Chart
-        if class_stats:
-            st.markdown("### 📈 Performance Comparison")
-            
-            # Calculate averages
-            student_avg = sum(st.session_state['subject_marks'].values()) / len(st.session_state['subject_marks'])
-            class_avg_overall = sum([class_stats[s]['mean'] for s in st.session_state['subject_marks'].keys()]) / len(st.session_state['subject_marks'])
-            
-            # Create bar chart
-            fig = go.Figure()
-            
-            fig.add_trace(go.Bar(
-                x=['Your Average', 'Class Average'],
-                y=[student_avg, class_avg_overall],
-                marker_color=['#667eea', '#764ba2'],
-                text=[f'{student_avg:.1f}', f'{class_avg_overall:.1f}'],
-                textposition='auto',
-                textfont=dict(size=16, color='white', family='Arial Black')
-            ))
-            
-            fig.update_layout(
-                title={
-                    'text': 'Your Performance vs Class Average',
-                    'x': 0.5,
-                    'xanchor': 'center'
-                },
-                yaxis_title='Average Marks',
-                height=350,
-                showlegend=False,
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
+            marks = st.number_input(
+                subject,
+                min_value=0.0,
+                max_value=100.0,
+                value=float(st.session_state['subject_marks'][subject]),
+                step=1.0,
+                key=f"marks_{subject}"
             )
+            st.session_state['subject_marks'][subject] = marks
             
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # Subject-wise Analysis Table
-        st.markdown("### 📋 Subject-wise Performance Analysis")
-        
-        comparison_data = []
-        for subject, marks in st.session_state['subject_marks'].items():
+            # Show class statistics if available
             if subject in class_stats:
                 class_avg = class_stats[subject]['mean']
+                class_std = class_stats[subject]['std']
                 difference = marks - class_avg
-                status = "✅ Above Average" if difference >= 0 else "⚠️ Below Average"
                 
-                comparison_data.append({
-                    'Subject': subject,
-                    'Your Marks': f"{marks:.0f}",
-                    'Class Average': f'{class_avg:.1f}',
-                    'Difference': f'{difference:+.1f}',
-                    'Status': status,
-                    'Grade': calculate_grade(marks)
-                })
+                # Comparison badge
+                if difference >= 0:
+                    badge_html = f'<span class="status-badge badge-above">+{difference:.1f} above average</span>'
+                else:
+                    badge_html = f'<span class="status-badge badge-below">{difference:.1f} below average</span>'
+                
+                # Difficulty badge
+                difficulty_text, difficulty_class = get_difficulty_badge(class_std)
+                difficulty_html = f'<span class="status-badge {difficulty_class}">{difficulty_text}</span>'
+                
+                # Display info
+                st.markdown(f"""
+                <div style='margin-top: -10px; margin-bottom: 15px; font-size: 0.9rem;'>
+                    Class Average: <strong>{class_avg:.1f}</strong> {badge_html} {difficulty_html}
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Navigation buttons
+    st.markdown("<br>", unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("← Back"):
+            st.session_state.page = 1
+            st.rerun()
+    
+    with col2:
+        if st.button("Predict Grade →"):
+            # Run prediction logic
+            perform_prediction()
+            st.session_state.page = 3
+            st.rerun()
+
+def show_prediction_results():
+    """Step 3: Prediction Results and Report Download"""
+    if not st.session_state.get('prediction_result'):
+        st.error("❌ No prediction results available")
+        st.session_state.page = 2
+        st.rerun()
+        return
+    
+    st.markdown('<div class="phase-header">Step 3: Prediction Results</div>', unsafe_allow_html=True)
+    
+    result = st.session_state['prediction_result']
+    predicted_grade = result['predicted_grade']
+    confidence = result.get('confidence', 0.0)
+    grade_color = get_grade_color(predicted_grade)
+    class_stats = st.session_state.get('class_statistics', {})
+    
+    # Prediction Results
+    # Large grade display
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown(f"""
+        <div style='text-align: center; padding: 50px 40px;
+                    background: linear-gradient(135deg, {grade_color}20 0%, {grade_color}10 100%);
+                    border-radius: 20px; border: 4px solid {grade_color};
+                    margin: 20px 0;'>
+            <div class='grade-display' style='color: {grade_color};'>{predicted_grade}</div>
+            <p style='font-size: 26px; color: #666; margin: 10px 0;'>
+                {get_grade_range(predicted_grade)} marks
+            </p>
+            <p style='font-size: 20px; color: #999;'>
+                Confidence: <strong>{confidence:.1f}%</strong>
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Performance Comparison Chart
+    if class_stats:
+        st.markdown("### 📈 Performance Comparison")
         
-        comparison_df = pd.DataFrame(comparison_data)
-        st.dataframe(
-            comparison_df,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Subject": st.column_config.TextColumn("Subject", width="medium"),
-                "Your Marks": st.column_config.TextColumn("Your Marks", width="small"),
-                "Class Average": st.column_config.TextColumn("Class Avg", width="small"),
-                "Difference": st.column_config.TextColumn("Difference", width="small"),
-                "Status": st.column_config.TextColumn("Status", width="medium"),
-                "Grade": st.column_config.TextColumn("Grade", width="small"),
-            }
+        # Calculate averages
+        student_avg = sum(st.session_state['subject_marks'].values()) / len(st.session_state['subject_marks'])
+        class_avg_overall = sum([class_stats[s]['mean'] for s in st.session_state['subject_marks'].keys()]) / len(st.session_state['subject_marks'])
+        
+        # Create bar chart
+        fig = go.Figure()
+        
+        fig.add_trace(go.Bar(
+            x=['Your Average', 'Class Average'],
+            y=[student_avg, class_avg_overall],
+            marker_color=['#667eea', '#764ba2'],
+            text=[f'{student_avg:.1f}', f'{class_avg_overall:.1f}'],
+            textposition='auto',
+            textfont=dict(size=16, color='white', family='Arial Black')
+        ))
+        
+        fig.update_layout(
+            title={
+                'text': 'Your Performance vs Class Average',
+                'x': 0.5,
+                'xanchor': 'center'
+            },
+            yaxis_title='Average Marks',
+            height=350,
+            showlegend=False,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
         )
         
-        # Performance Insights
-        marks_list = list(st.session_state['subject_marks'].values())
-        avg_score = sum(marks_list) / len(marks_list)
-        strong_subjects = [s for s, m in st.session_state['subject_marks'].items() if m >= 70]
-        weak_subjects = [s for s, m in st.session_state['subject_marks'].items() if m < 60]
-        
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            st.metric("Average Score", f"{avg_score:.1f}")
-        
-        with col2:
-            st.metric("Strong Subjects", len(strong_subjects))
-        
-        with col3:
-            st.metric("Weak Subjects", len(weak_subjects))
-        
-        # Recommendations
-        if weak_subjects:
-            st.markdown('<div class="info-box">', unsafe_allow_html=True)
-            st.markdown(f"**💡 Recommendation:** Focus on improving: {', '.join(weak_subjects)}")
-            st.markdown('</div>', unsafe_allow_html=True)
+        st.plotly_chart(fig, use_container_width=True)
     
-       # PHASE 4: DOWNLOAD REPORT
-       
-    st.markdown('<div class="phase-header">Section-4: Report Card</div>', unsafe_allow_html=True)
+    # Subject-wise Analysis
+    st.markdown("### 📋 Subject-wise Performance Analysis")
     
+    comparison_data = []
+    for subject, marks in st.session_state['subject_marks'].items():
+        if subject in class_stats:
+            class_avg = class_stats[subject]['mean']
+            difference = marks - class_avg
+            status = "✅ Above Average" if difference >= 0 else "⚠️ Below Average"
+            
+            comparison_data.append({
+                'Subject': subject,
+                'Your Marks': f"{marks:.0f}",
+                'Class Average': f'{class_avg:.1f}',
+                'Difference': f'{difference:+.1f}',
+                'Status': status,
+                'Grade': calculate_grade(marks)
+            })
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    st.dataframe(
+        comparison_df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Subject": st.column_config.TextColumn("Subject", width="medium"),
+            "Your Marks": st.column_config.TextColumn("Your Marks", width="small"),
+            "Class Average": st.column_config.TextColumn("Class Avg", width="small"),
+            "Difference": st.column_config.TextColumn("Difference", width="small"),
+            "Status": st.column_config.TextColumn("Status", width="medium"),
+            "Grade": st.column_config.TextColumn("Grade", width="small"),
+        }
+    )
+    
+    # Metrics
+    marks_list = list(st.session_state['subject_marks'].values())
+    avg_score = sum(marks_list) / len(marks_list)
+    strong_subjects = [s for s, m in st.session_state['subject_marks'].items() if m >= 70]
+    weak_subjects = [s for s, m in st.session_state['subject_marks'].items() if m < 60]
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Average Score", f"{avg_score:.1f}")
+    
+    with col2:
+        st.metric("Strong Subjects", len(strong_subjects))
+    
+    with col3:
+        st.metric("Weak Subjects", len(weak_subjects))
+    
+    # Recommendations
+    if weak_subjects:
+        st.markdown('<div class="info-box">', unsafe_allow_html=True)
+        st.markdown(f"**💡 Recommendation:** Focus on improving: {', '.join(weak_subjects)}")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Download Report Card button
+    st.markdown("<br><br>", unsafe_allow_html=True)
     if st.button("📄 Download Report Card", use_container_width=True):
         pred_result = st.session_state.get('prediction_result')
         
         if pred_result is None:
-            st.error("❌ Please run a prediction first in Phase 3")
+            st.error("❌ No prediction results available")
         else:
             with st.spinner("📄 Generating PDF report..."):
                 try:
@@ -832,10 +764,114 @@ def main():
                     st.error(f"❌ Failed to generate PDF: {e}")
                     st.info("💡 Please try again")
     
-    # Footer
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.divider()
-    st.caption("🎓 Student Grade Prediction Dashboard | Built with Streamlit")
+    # Navigation button
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("← Edit Marks"):
+        st.session_state.page = 2
+        st.rerun()
+
+def perform_prediction():
+    """Perform grade prediction using the loaded model"""
+    try:
+        # Get model (should be loaded in main)
+        model = st.session_state.get('model')
+        
+        # Prepare data for prediction
+        pred_df = pd.DataFrame([st.session_state['subject_marks']])
+        
+        # Align with model features
+        if hasattr(model, 'feature_names_in_'):
+            pred_df = pred_df.reindex(columns=model.feature_names_in_, fill_value=0)
+        
+        # Make prediction
+        prediction = model.predict(pred_df)[0]
+        
+        # Get confidence
+        confidence = 0.0
+        probabilities = None
+        
+        if hasattr(model, 'predict_proba'):
+            try:
+                proba = model.predict_proba(pred_df)[0]
+                confidence = float(max(proba) * 100.0)
+                probabilities = {
+                    str(label): float(prob * 100.0)
+                    for label, prob in zip(model.classes_, proba)
+                }
+            except:
+                pass
+        
+        # Store result
+        st.session_state['prediction_result'] = {
+            'predicted_grade': str(prediction),
+            'confidence': confidence,
+            'probabilities': probabilities,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        st.error(f"❌ Prediction failed: {e}")
+        st.info("💡 Please check your inputs and try again")
+
+# MAIN APPLICATION
+
+def main():
+    # Initialize page navigation
+    if "page" not in st.session_state:
+        st.session_state.page = 1
+    
+    # Header
+    st.markdown("""
+    <div class="main-header">
+        <h1 style="font-size:36px; font-weight:700; margin: 0;">Student Grade Prediction</h1>
+        <p style="margin: 8px 0 0 0;">AI Powered Academic Performance Predictor</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    if 'student_info' not in st.session_state:
+        st.session_state['student_info'] = {
+            'Name': '',
+            'Roll_Number': '',
+            'Branch': '',
+            'Year': ''
+        }
+    
+    if 'subject_marks' not in st.session_state:
+        st.session_state['subject_marks'] = {
+            'Calculus-1': 0,
+            'Calculus-2': 0,
+            'Python-1': 0,
+            'Python-2': 0,
+            'SM-1': 0
+        }
+    
+    if 'prediction_result' not in st.session_state:
+        st.session_state['prediction_result'] = None
+    
+    if 'all_students_data' not in st.session_state:
+        st.session_state['all_students_data'] = load_all_students_data(db_path)
+    
+    if 'class_statistics' not in st.session_state and st.session_state['all_students_data'] is not None:
+        st.session_state['class_statistics'] = calculate_class_stats(st.session_state['all_students_data'])
+    
+    # Load model and store in session state
+    model = load_model()
+    if model is None:
+        st.stop()
+    st.session_state['model'] = model
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Router
+    if st.session_state.page == 1:
+        show_student_profile()
+    elif st.session_state.page == 2:
+        show_subject_marks()
+    elif st.session_state.page == 3:
+        show_prediction_results()
+    else:
+        st.session_state.page = 1
+        show_student_profile()
 
 
 if __name__ == '__main__':
