@@ -2,12 +2,20 @@ import joblib
 import sqlite3
 import pandas as pd
 import os
-import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+
+# Feature Scaling & Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+
+# Regression Models
+from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+
+# Regression Metrics
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # PATH SETUP
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -78,147 +86,89 @@ print(df["SM-2"].value_counts().sort_index())
 target_column = "SM-2"
 
 X = df.drop(columns=[target_column])
-y_continuous = df[target_column]
-
-# Convert continuous scores to grade categories for classification
-def score_to_grade(score):
-    """Convert numeric score to grade category"""
-    if score >= 90:
-        return "A+"
-    elif score >= 80:
-        return "A"
-    elif score >= 70:
-        return "B+"
-    elif score >= 60:
-        return "B"
-    elif score >= 50:
-        return "C"
-    elif score >= 35:
-        return "D"
-    else:
-        return "F"
-
-y = y_continuous.apply(score_to_grade)
+y = df[target_column]   # Predict percentile directly
 
 print(f"\n✓ Features: {list(X.columns)}")
-print(f"✓ Target: {target_column} (converted to grades)")
+print(f"✓ Target: {target_column} percentile")
 print(f"✓ Training samples: {len(X)}")
-print(f"✓ Grade distribution:")
-print(y.value_counts().sort_index())
 
 # TRAIN-TEST SPLIT
-try:
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
-    )
-    print("✓ Using stratified train-test split")
-except:
-    print("⚠ Stratified split failed - using normal split")
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42
-    )
-
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print("✓ Train-test split completed")
 print(f"  Train size: {len(X_train)}, Test size: {len(X_test)}")
 
 # MODEL DEFINITIONS
 models = {
-    "Logistic Regression": LogisticRegression(
-        max_iter=1000, class_weight="balanced", random_state=42
+
+    "Linear Regression": Pipeline([
+        ("scaler", StandardScaler()),
+        ("model", LinearRegression())
+    ]),
+
+    "Decision Tree": DecisionTreeRegressor(
+        random_state=42
     ),
-    "Decision Tree": DecisionTreeClassifier(
-        class_weight="balanced", random_state=42
-    ),
-    "Random Forest": RandomForestClassifier(
-        class_weight="balanced", random_state=42, n_estimators=100
+
+    "Random Forest": RandomForestRegressor(
+        random_state=42,
+        n_estimators=200
     )
 }
 
 # MODEL TRAINING & EVALUATION
-print("\n" + "=" * 60)
-print("MODEL EVALUATION")
-print("=" * 60)
 
 best_model = None
 best_model_name = ""
-best_accuracy = 0
+best_r2 = -999
+
 results = []
 
-# TRAIN LOOP
 for name, model in models.items():
+
     print(f"\n--- {name} ---")
-    
+
     # Train model
     model.fit(X_train, y_train)
-    
-    # Make predictions
+
+    # Predict
     predictions = model.predict(X_test)
-    
-    # Calculate accuracy
-    accuracy = accuracy_score(y_test, predictions)
-    
-    print(f"Accuracy: {accuracy:.4f} ({accuracy*100:.2f}%)")
-    print("\nClassification Report:")
-    print(classification_report(y_test, predictions, zero_division=0))
-    
+
+    # Regression metrics
+    mae = mean_absolute_error(y_test, predictions)
+    rmse = np.sqrt(mean_squared_error(y_test, predictions))
+    r2 = r2_score(y_test, predictions)
+
+    print(f"MAE : {mae:.2f}")
+    print(f"RMSE: {rmse:.2f}")
+    print(f"R²  : {r2:.4f}")
+
     # Store results
-    results.append({"Model": name, "Accuracy": accuracy})
-    
+    results.append({
+        "Model": name,
+        "MAE": mae,
+        "RMSE": rmse,
+        "R2": r2
+    })
+
     # Track best model
-    if accuracy > best_accuracy:
-        best_accuracy = accuracy
+    if r2 > best_r2:
+        best_r2 = r2
         best_model = model
         best_model_name = name
 
 # RESULTS SUMMARY
 results_df = pd.DataFrame(results)
 
-print("\n" + "=" * 60)
-print("MODEL COMPARISON SUMMARY")
-print("=" * 60)
+print("\nMODEL COMPARISON")
 print(results_df.to_string(index=False))
-print(f"\n🏆 Best Model: {best_model_name}")
-print(f"🏆 Best Accuracy: {best_accuracy:.4f} ({best_accuracy*100:.2f}%)")
 
-# CONFUSION MATRIX
-print("\n" + "=" * 60)
-print("GENERATING CONFUSION MATRIX")
-print("=" * 60)
-
-try:
-    fig, ax = plt.subplots(figsize=(10, 8))
-    
-    # Get predictions for confusion matrix
-    y_pred = best_model.predict(X_test)
-    
-    # Create confusion matrix display
-    disp = ConfusionMatrixDisplay.from_predictions(
-        y_test, 
-        y_pred, 
-        ax=ax, 
-        cmap='Blues',
-        colorbar=True
-    )
-    
-    ax.set_title(f'Confusion Matrix - {best_model_name}\nAccuracy: {best_accuracy:.2%}')
-    plt.tight_layout()
-    
-    # Save confusion matrix
-    confusion_matrix_path = os.path.join(script_dir, "confusion_matrix.png")
-    plt.savefig(confusion_matrix_path, dpi=150, bbox_inches='tight')
-    print(f"✓ Confusion matrix saved: {confusion_matrix_path}")
-    
-    plt.close()
-    
-except Exception as e:
-    print(f"⚠ Warning: Could not generate confusion matrix: {e}")
+print(f"\nBest Model: {best_model_name}")
+print(f"Best R² Score: {best_r2:.4f}")
 
 # SAVE BEST MODEL
 print("\n" + "=" * 60)
 print("SAVING MODEL")
 print("=" * 60)
-
-# Store feature names for later validation
-best_model.feature_names_in_ = X.columns
 
 model_path = os.path.join(script_dir, "best_model.pkl")
 
@@ -241,7 +191,7 @@ print("\n" + "=" * 60)
 print("TRAINING COMPLETE")
 print("=" * 60)
 print(f"Model Type: {best_model_name}")
-print(f"Model Accuracy: {best_accuracy:.2%}")
-print(f"Feature Schema: {list(best_model.feature_names_in_)}")
+print(f"Best R² Score: {best_r2:.4f}")
+print(f"Feature Schema: {list(X.columns)}")
 print(f"Model Path: {model_path}")
 print("=" * 60)

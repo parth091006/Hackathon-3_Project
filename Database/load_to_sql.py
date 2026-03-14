@@ -7,7 +7,7 @@ import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
 
-csv_path = os.path.join(project_dir, "Dataset", "Hackathon-3 values.csv")
+csv_path = os.path.join(project_dir, "Dataset", "Student_Dataset.csv")
 db_path = os.path.join(script_dir, "grades.db")
 
 print("=" * 60)
