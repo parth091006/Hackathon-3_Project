@@ -1,3 +1,7 @@
+import React, { useState } from 'react';
+import API from '../api';
+
+// Types
 import { StudentProfile } from '../types';
 
 interface Step1ProfileProps {
@@ -7,15 +11,48 @@ interface Step1ProfileProps {
 }
 
 export default function Step1Profile({ profile, setProfile, onNext }: Step1ProfileProps) {
-  const handleSubmit = (e: React.FormEvent) => {
+  // Form validation state management
+  const [error, setError] = useState<string>('');
+  const [isValidating, setIsValidating] = useState<boolean>(false);
+
+  /** Form Submission and Student Validation Handler. Validates form inputs and makes API call to verify student exists in dataset. Only proceeds to next step if student is found in the database. System Pipeline Position: Dataset Validation → Score Entry*/
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (profile.full_name && profile.roll_number && profile.branch && profile.year) {
-      onNext();
+    setError('');
+
+    // Client-side validation for required fields
+    if (!profile.full_name || !profile.roll_number || !profile.branch || !profile.year) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
+    setIsValidating(true);
+
+    try {
+      // API call to validate student against dataset
+      const response = await API.post('/validate-student', {
+        name: profile.full_name,
+        rollNo: profile.roll_number,
+        branch: profile.branch
+      });
+
+      const data = response.data;
+
+      // Proceed to next step only if student is validated
+      if (data.valid) {
+        onNext();
+      } else {
+        setError('Student not found. Please check Name, Roll No, or Branch.');
+      }
+    } catch (err) {
+      setError('Failed to validate student information. Please try again.');
+    } finally {
+      setIsValidating(false);
     }
   };
 
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-8">
+    <div className="w-full px-0 sm:px-0 lg:px-0">
       <div className="max-w-7xl mx-auto">
         <div className="bg-gray-800 rounded-3xl shadow-2xl p-12 lg:p-16 border border-gray-700">
           <h2 className="text-4xl lg:text-5xl font-bold text-white mb-4">Student Profile</h2>
@@ -87,12 +124,19 @@ export default function Step1Profile({ profile, setProfile, onNext }: Step1Profi
               </div>
             </div>
 
+            {error && (
+              <div className="mt-6 p-4 bg-red-900 bg-opacity-50 border border-red-500 rounded-lg">
+                <p className="text-red-200 text-sm">{error}</p>
+              </div>
+            )}
+
             <div className="mt-12 flex justify-end">
               <button
                 type="submit"
-                className="px-12 py-4 text-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                disabled={isValidating}
+                className="px-12 py-4 text-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Next →
+                {isValidating ? 'Checking database...' : 'Next →'}
               </button>
             </div>
           </form>

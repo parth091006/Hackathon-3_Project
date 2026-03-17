@@ -1,15 +1,18 @@
+// PDF Libraries
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+// Types
 import { PredictionResult, Statistics } from '../types';
 
 export const generatePDF = (
   result: PredictionResult,
   statistics: Statistics,
   subjectNames: string[],
-  subjectKeys: (keyof typeof result.scores)[]
+  subjectKeys: (keyof PredictionResult['scores'])[]
 ) => {
+  // Initialize PDF document
   const doc = new jsPDF();
-
   const getGrade = (percentile: number) => {
     if (percentile >= 91) return 'A+';
     if (percentile >= 81) return 'A';
@@ -20,18 +23,21 @@ export const generatePDF = (
     return 'F';
   };
 
+  // PDF Header Section with gradient background
   doc.setFillColor(139, 92, 246);
   doc.rect(0, 0, 210, 40, 'F');
 
+  // Title and subtitle
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(24);
   doc.setFont('helvetica', 'bold');
-  doc.text('Student Grade Prediction', 105, 15, { align: 'center' });
+  doc.text('Student Percentile Prediction', 105, 15, { align: 'center' });
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text('AI Powered Academic Performance Report', 105, 25, { align: 'center' });
 
+  // Student Information Section
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
@@ -44,10 +50,12 @@ export const generatePDF = (
   doc.text(`Branch: ${result.profile.branch}`, 14, 76);
   doc.text(`Year: ${result.profile.year}`, 14, 84);
 
+  // Subject Performance Table
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Subject Performance', 14, 100);
 
+  // Prepare performance data for table
   const performanceData = subjectNames.map((subject, idx) => {
     const key = subjectKeys[idx];
     const score = result.scores[key];
@@ -55,6 +63,7 @@ export const generatePDF = (
     return [subject, `${score.toFixed(2)}%`, grade];
   });
 
+  // Generate performance table
   autoTable(doc, {
     startY: 105,
     head: [['Subject', 'Percentile', 'Grade']],
@@ -65,10 +74,12 @@ export const generatePDF = (
 
   const lastY = (doc as any).lastAutoTable.finalY + 10;
 
+  // Class Comparison Table
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Class Comparison', 14, lastY);
 
+  // Prepare comparison data with class averages
   const comparisonData = subjectNames.map((subject, idx) => {
     const key = subjectKeys[idx];
     const score = result.scores[key];
@@ -84,6 +95,7 @@ export const generatePDF = (
     ];
   });
 
+  // Generate comparison table
   autoTable(doc, {
     startY: lastY + 5,
     head: [['Subject', 'Your Score', 'Class Avg', 'Difference', 'Status']],
@@ -94,6 +106,7 @@ export const generatePDF = (
 
   const lastY2 = (doc as any).lastAutoTable.finalY + 10;
 
+  // Prediction Summary Section
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Prediction Summary', 14, lastY2);
@@ -101,17 +114,20 @@ export const generatePDF = (
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text(`Predicted Percentile: ${result.predicted_percentile.toFixed(2)}%`, 14, lastY2 + 10);
-  doc.text(`Predicted Grade: ${result.grade}`, 14, lastY2 + 20);
+  doc.text(`Predicted Percentile: ${result.grade}`, 14, lastY2 + 20);
   doc.text(`Confidence Score: ${result.confidence.toFixed(2)}%`, 14, lastY2 + 30);
   doc.text(`Percentile Range: ${result.percentile_range}`, 14, lastY2 + 40);
 
+  // Performance analytics calculations
   const userScores = subjectKeys.map(key => result.scores[key]);
   const avgPercentile = userScores.reduce((a, b) => a + b, 0) / userScores.length;
   const strongSubjects = subjectNames.filter((_, idx) => userScores[idx] >= 70);
   const weakSubjects = subjectNames.filter((_, idx) => userScores[idx] < 60);
 
+  // Add new page for detailed analysis
   doc.addPage();
 
+  // Second page header
   doc.setFillColor(139, 92, 246);
   doc.rect(0, 0, 210, 30, 'F');
 
@@ -120,6 +136,7 @@ export const generatePDF = (
   doc.setFont('helvetica', 'bold');
   doc.text('Performance Analysis', 105, 18, { align: 'center' });
 
+  // Overall Performance Section
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
@@ -138,6 +155,7 @@ export const generatePDF = (
     doc.text(`  - ${weakSubjects.join(', ')}`, 14, 91);
   }
 
+  // Performance Evaluation Section
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Performance Evaluation', 14, 110);
@@ -156,6 +174,7 @@ export const generatePDF = (
   }
   doc.text(evaluation, 14, 120);
 
+  // Risk Assessment Section
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Risk Assessment', 14, 140);
@@ -172,6 +191,7 @@ export const generatePDF = (
   }
   doc.text(riskLevel, 14, 150);
 
+  // Recommendations Section (only if weak subjects exist)
   if (weakSubjects.length > 0) {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
@@ -185,10 +205,12 @@ export const generatePDF = (
     });
   }
 
+  // PDF Footer with generation info
   doc.setFontSize(8);
   doc.setTextColor(128, 128, 128);
-  doc.text('Generated by Student Grade Prediction System', 105, 285, { align: 'center' });
+  doc.text('Generated by Student Percentile Prediction System', 105, 285, { align: 'center' });
   doc.text(`Date: ${new Date().toLocaleDateString()}`, 105, 290, { align: 'center' });
 
+  // Save PDF with student name in filename
   doc.save(`${result.profile.full_name.replace(/\s+/g, '_')}_Report_Card.pdf`);
 };

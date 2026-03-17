@@ -1,8 +1,12 @@
-import { useEffect, useState } from 'react';
 import Plot from 'react-plotly.js';
-import { PredictionResult, Statistics } from '../types';
-import axios from 'axios';
+
+// Icons
 import { Download, Award, TrendingUp, AlertCircle } from 'lucide-react';
+
+// Types
+import { PredictionResult, Statistics } from '../types';
+
+// Utils
 import { generatePDF } from '../utils/pdfGenerator';
 
 interface Step3ResultsProps {
@@ -11,10 +15,12 @@ interface Step3ResultsProps {
   onBack: () => void;
 }
 
+// Subject names and keys for data mapping
 const subjectNames = ['Calculus-1', 'Calculus-2', 'Python-1', 'Python-2', 'SM-1'];
-const subjectKeys: (keyof typeof result.scores)[] = ['calculus_1', 'calculus_2', 'python_1', 'python_2', 'sm_1'];
+const subjectKeys: (keyof PredictionResult['scores'])[] = ['calculus_1', 'calculus_2', 'python_1', 'python_2', 'sm_1'];
 
 export default function Step3Results({ result, statistics, onBack }: Step3ResultsProps) {
+  /** Grade Color Mapping */
   const getGradeColor = (grade: string) => {
     const colors: { [key: string]: string } = {
       'A+': 'from-green-500 to-green-600',
@@ -28,6 +34,7 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
     return colors[grade] || 'from-gray-500 to-gray-600';
   };
 
+  /** Grade Classification Based on Percentile. Converts percentile scores to letter grades according to academic grading standards. */
   const getGrade = (percentile: number) => {
     if (percentile >= 91) return 'A+';
     if (percentile >= 81) return 'A';
@@ -38,13 +45,16 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
     return 'F';
   };
 
+  // Performance analytics calculations
   const userScores = subjectKeys.map(key => result.scores[key]);
   const classAverages = subjectNames.map(name => statistics[name]?.mean || 0);
   const avgPercentile = userScores.reduce((a, b) => a + b, 0) / userScores.length;
 
+  // Identify strong and weak subjects for recommendations
   const strongSubjects = subjectNames.filter((_, idx) => userScores[idx] >= 70);
   const weakSubjects = subjectNames.filter((_, idx) => userScores[idx] < 60);
 
+  // Chart data configuration for performance visualization
   const chartData = [
     {
       x: subjectNames,
@@ -65,7 +75,7 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl shadow-2xl p-8 text-center">
-        <h2 className="text-2xl font-bold text-white mb-4">Predicted Grade</h2>
+        <h2 className="text-2xl font-bold text-white mb-4">Predicted Percentile</h2>
         <div className="text-8xl font-bold text-white mb-4">
           {result.predicted_percentile.toFixed(2)}%
         </div>

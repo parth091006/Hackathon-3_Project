@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react';
-import { SubjectScores, Statistics } from '../types';
-import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import API from '../api';
+
+// Icons
 import { TrendingUp, TrendingDown } from 'lucide-react';
+
+// Types
+import { SubjectScores, Statistics } from '../types';
 
 interface Step2ScoresProps {
   scores: SubjectScores;
@@ -10,6 +14,7 @@ interface Step2ScoresProps {
   onBack: () => void;
 }
 
+// Subject mapping for API compatibility
 const subjectMapping: { [key: string]: keyof SubjectScores } = {
   'Calculus-1': 'calculus_1',
   'Calculus-2': 'calculus_2',
@@ -19,13 +24,15 @@ const subjectMapping: { [key: string]: keyof SubjectScores } = {
 };
 
 export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2ScoresProps) {
+  // Statistics state for class comparison data
   const [statistics, setStatistics] = useState<Statistics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  /** Fetch Class Statistics on Component Mount. Retrieves class statistics from the API to provide real-time feedback on student performance relative to peers. System Pipeline Position: Dashboard Display ← Prediction API */
   useEffect(() => {
     const fetchStatistics = async () => {
       try {
-        const response = await axios.get('http://localhost:8000/api/statistics');
+        const response = await API.get('/api/statistics');
         setStatistics(response.data);
       } catch (error) {
         console.error('Error fetching statistics:', error);
@@ -37,12 +44,14 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
     fetchStatistics();
   }, []);
 
+  /** Subject Difficulty Classification. Determines difficulty level based on standard deviation of class scores. Higher standard deviation indicates more difficult subject. */
   const getDifficulty = (std: number) => {
     if (std > 15) return { level: 'Hard', color: 'text-red-400' };
     if (std > 10) return { level: 'Medium', color: 'text-yellow-400' };
     return { level: 'Easy', color: 'text-green-400' };
   };
 
+  /** Form Submission Handler. Validates all subject scores are entered and proceeds to prediction. Triggers the prediction API call through the parent component. */
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onNext();
