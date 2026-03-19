@@ -1,0 +1,10 @@
+{
+  "description": "Initial R2 scores recorded at project baseline (before pipeline growth). Used for Before/After model comparison in dashboard.",
+  "baseline_date": "2026-03-01",
+  "models": {
+    "Ridge": 0.9689,
+    "Linear Regression": 0.9624,
+    "Random Forest": 0.9277,
+    "Decision Tree": 0.8505
+  }
+}
