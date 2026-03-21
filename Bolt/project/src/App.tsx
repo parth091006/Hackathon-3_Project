@@ -72,21 +72,44 @@ function App() {
 
   const [profile, setProfile] = useState<StudentProfile>({
     full_name: '',
-    roll_number: '',
     branch: '',
-    year: '2nd Year',
   });
 
   const [scores, setScores] = useState<SubjectScores>({
-    calculus_1: 0,
-    calculus_2: 0,
     python_1: 0,
+    sql: 0,
+    calculus_1: 0,
     python_2: 0,
+    hackathon_1: 0,
+    calculus_2: 0,
     sm_1: 0,
+    linear_algebra: 0,
+    discrete_mathematics: 0,
+    hackathon_2: 0,
+    dsa: 0,
   });
 
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
+
+  const handleRegisterAndNext = async (name: string, branch: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await API.post('/register-student', {
+        full_name: name,
+        branch: branch,
+      });
+      setProfile({
+        full_name: name,
+        branch: branch,
+      });
+      setStep(2);
+    } catch (err) {
+      setError('Failed to register student. Please ensure the backend is running.');
+    }
+    setLoading(false);
+  };
 
   const handlePredict = async () => {
     setLoading(true);
@@ -112,8 +135,12 @@ function App() {
   const resetDashboard = () => {
     setStep(1);
     setShowPredictionsHistory(false);
-    setProfile({ full_name: '', roll_number: '', branch: '', year: '2nd Year' });
-    setScores({ calculus_1: 0, calculus_2: 0, python_1: 0, python_2: 0, sm_1: 0 });
+    setProfile({ full_name: '', branch: '' });
+    setScores({
+      python_1: 0, sql: 0, calculus_1: 0, python_2: 0, hackathon_1: 0,
+      calculus_2: 0, sm_1: 0, linear_algebra: 0, discrete_mathematics: 0,
+      hackathon_2: 0, dsa: 0,
+    });
     setResult(null);
     setStatistics(null);
     setError(null);
@@ -126,7 +153,7 @@ function App() {
   };
 
   return (
-    <div style={{ color: "black" }} className="min-h-screen overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-x-hidden">
       <div className="bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 shadow-2xl relative z-10">
         <div className="w-full max-w-[2000px] mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
@@ -235,7 +262,7 @@ function App() {
 
             {!loading && !showPredictionsHistory && step === 1 && (
               <ErrorBoundary>
-                <Step1Profile profile={profile} setProfile={setProfile} onNext={() => setStep(2)} />
+                <Step1Profile profile={profile} setProfile={setProfile} onNext={handleRegisterAndNext} />
               </ErrorBoundary>
             )}
 

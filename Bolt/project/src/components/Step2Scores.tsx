@@ -12,11 +12,17 @@ interface Step2ScoresProps {
 }
 
 const subjectMapping: { [key: string]: keyof SubjectScores } = {
-  'Calculus-1': 'calculus_1',
-  'Calculus-2': 'calculus_2',
   'Python-1': 'python_1',
+  'SQL': 'sql',
+  'Calculus-1': 'calculus_1',
   'Python-2': 'python_2',
+  'Hackathon-1': 'hackathon_1',
+  'Calculus-2': 'calculus_2',
   'SM-1': 'sm_1',
+  'Linear Algebra': 'linear_algebra',
+  'Discrete Mathematics': 'discrete_mathematics',
+  'Hackathon-2': 'hackathon_2',
+  'DSA': 'dsa',
 };
 
 const container = {
@@ -47,18 +53,17 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
     fetchStatistics();
   }, []);
 
-  const getDifficulty = (std: number) => {
-    if (std > 15) return { level: 'Hard', color: 'text-red-400' };
-    if (std > 10) return { level: 'Medium', color: 'text-yellow-400' };
-    return { level: 'Easy', color: 'text-green-400' };
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onNext();
   };
 
-  const subjects = ['Calculus-1', 'Calculus-2', 'Python-1', 'Python-2', 'SM-1'];
+  const subjects = [
+    'Python-1', 'SQL', 'Calculus-1', 'Python-2', 'Hackathon-1',
+    'Calculus-2', 'SM-1', 'Linear Algebra', 'Discrete Mathematics',
+    'Hackathon-2', 'DSA'
+  ];
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -71,7 +76,7 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5"
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
           >
             {subjects.map((subject) => {
               const key = subjectMapping[subject];
@@ -79,7 +84,6 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
               const currentScore = scores[key] || 0;
               const classAvg = stat?.mean || 0;
               const difference = currentScore - classAvg;
-              const difficulty = stat ? getDifficulty(stat.std) : null;
 
               return (
                 <motion.div
@@ -126,12 +130,6 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
                         )}
                       </div>
 
-                      {difficulty && (
-                        <div className="flex justify-between items-center bg-gray-800 p-2 rounded-lg">
-                          <span className="text-gray-400">Difficulty</span>
-                          <span className={`font-bold ${difficulty.color}`}>{difficulty.level}</span>
-                        </div>
-                      )}
                     </motion.div>
                   )}
                 </motion.div>

@@ -17,7 +17,7 @@ DATASET_PATH = os.path.join(SCRIPT_DIR, "Dataset", "Student_Dataset.csv")
 DB_SCRIPT    = os.path.join(SCRIPT_DIR, "Database", "load_to_sql.py")
 TRAIN_SCRIPT = os.path.join(SCRIPT_DIR, "Training", "train_model.py")
 
-NEW_ROWS = 1000  # Number of new students to generate
+NEW_ROWS = 50  # Number of new students to generate
 
 BRANCHES = ["B.Tech CSE", "B.Tech AIML", "B.Tech AIDS"]
 
@@ -61,26 +61,26 @@ for i in range(NEW_ROWS):
     row = {}
 
     # Base subjects
-    row["Python-1"]   = np.clip(np.random.normal(means["Python-1"],   stds["Python-1"]),   0, 1000)
-    row["Calculus-1"] = np.clip(np.random.normal(means["Calculus-1"], stds["Calculus-1"]), 0, 1000)
-    row["SM-1"]       = np.clip(np.random.normal(means["SM-1"],       stds["SM-1"]),       0, 1000)
+    row["Python-1"]   = np.clip(np.random.normal(means["Python-1"],   stds["Python-1"]),   0, 100)
+    row["Calculus-1"] = np.clip(np.random.normal(means["Calculus-1"], stds["Calculus-1"]), 0, 100)
+    row["SM-1"]       = np.clip(np.random.normal(means["SM-1"],       stds["SM-1"]),       0, 100)
 
     # Progressions
-    row["Python-2"]   = np.clip(row["Python-1"]   + np.random.normal(5, 5),  0, 1000)
-    row["Calculus-2"] = np.clip(row["Calculus-1"] + np.random.normal(3, 5),  0, 1000)
+    row["Python-2"]   = np.clip(row["Python-1"]   + np.random.normal(5, 5),  0, 100)
+    row["Calculus-2"] = np.clip(row["Calculus-1"] + np.random.normal(3, 5),  0, 100)
 
     # Derived subjects
-    row["SQL"]         = np.clip(row["Python-1"]  + np.random.normal(0, 10), 0, 1000)
-    row["DSA"]         = np.clip(row["Python-1"]  + np.random.normal(2, 10), 0, 1000)
-    row["Hackathon-1"] = np.clip(row["Python-2"]  + np.random.normal(0, 10), 0, 1000)
-    row["Hackathon-2"] = np.clip(row["Python-2"]  + np.random.normal(0, 10), 0, 1000)
+    row["SQL"]         = np.clip(row["Python-1"]  + np.random.normal(0, 10), 0, 100)
+    row["DSA"]         = np.clip(row["Python-1"]  + np.random.normal(2, 10), 0, 100)
+    row["Hackathon-1"] = np.clip(row["Python-2"]  + np.random.normal(0, 10), 0, 100)
+    row["Hackathon-2"] = np.clip(row["Python-2"]  + np.random.normal(0, 10), 0, 100)
 
     row["Linear Algebra"] = np.clip(
-        row["SM-1"] + np.random.normal(0, 5), 0, 1000
+        row["SM-1"] + np.random.normal(0, 5), 0, 100
     )
     row["Discrete Mathematics"] = np.clip(
         row["SM-1"] * 0.6 + row["Calculus-1"] * 0.4 +
-        np.random.normal(0, 8), 0, 1000
+        np.random.normal(0, 8), 0, 100
     )
 
     # Target: SM-2 as weighted average of all inputs
@@ -97,7 +97,7 @@ for i in range(NEW_ROWS):
         row["Hackathon-2"]          * 0.07 +
         row["DSA"]                  * 0.05 +
         np.random.normal(0, 3),
-        0, 1000
+        0, 100
     )
 
     new_roll = f"STU{(last_num + i + 1):04d}"

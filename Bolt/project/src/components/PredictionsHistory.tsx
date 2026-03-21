@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CountUp from 'react-countup';
 import API from '../utils/api';
 import {
-  ArrowLeft, Calendar, User, Hash, TrendingUp, Percent,
+  ArrowLeft, Calendar, User, TrendingUp, Percent,
   Star, BarChart3, Target, Users, Brain, Activity, Database
 } from 'lucide-react';
 
@@ -101,8 +101,17 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
   useEffect(() => {
     fetchPredictions();
     fetchDashboardData();
-    fetchDatasetGrowth();
   }, []);
+
+  useEffect(() => {
+    if (dashboardData?.dataset) {
+      setDatasetGrowth({
+        initial: Math.max(0, dashboardData.dataset.total_students - predictions.length),
+        current: dashboardData.dataset.total_students,
+        last_updated: new Date().toISOString()
+      });
+    }
+  }, [dashboardData, predictions]);
 
   const fetchDashboardData = async () => {
     try {
@@ -117,17 +126,7 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
     }
   };
 
-  const fetchDatasetGrowth = async () => {
-    try {
-      setDatasetGrowth({
-        initial: 500,
-        current: 512,
-        last_updated: new Date().toISOString()
-      });
-    } catch (err) {
-      console.error(err);
-    }
-  };
+
 
   const fetchPredictions = async () => {
     try {
@@ -266,8 +265,8 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
                 {/* Quick Stats Grid */}
                 <motion.div variants={modelContainer} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                   {[
-                    { label: 'Total Students', value: <CountUp end={dashboardData?.dataset.total_students || 0} separator="," duration={1.5} delay={0.1} />, icon: Users, color: 'blue', valueClass: 'text-4xl' },
-                    { label: 'Features Used', value: <CountUp end={dashboardData?.dataset.features || 0} duration={1.5} delay={0.2} />, icon: Target, color: 'orange', valueClass: 'text-4xl' },
+                    { label: 'Total Students', value: <CountUp end={dashboardData?.dataset?.total_students || 0} separator="," duration={1.5} delay={0.1} />, icon: Users, color: 'blue', valueClass: 'text-4xl' },
+                    { label: 'Features Used', value: <CountUp end={dashboardData?.dataset?.features || 0} duration={1.5} delay={0.2} />, icon: Target, color: 'orange', valueClass: 'text-4xl' },
                     { label: 'Avg Percentile', value: <CountUp end={avgPercentileComputed} duration={1.5} decimals={1} suffix="%" delay={0.4} />, icon: TrendingUp, color: 'purple', valueClass: 'text-4xl text-purple-400' }
                   ].map((stat, i) => (
                     <motion.div key={i} variants={modelRow} {...cardHover} className="bg-gray-900 rounded-2xl p-6 border border-gray-700 shadow-lg flex flex-col justify-between h-40">
@@ -363,29 +362,6 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
                   </motion.div>
                 </div>
 
-                <motion.div {...cardHover} className="bg-gray-900 rounded-2xl border border-gray-700 p-8 shadow-lg">
-                  <h3 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-                    <Target className="text-orange-400" /> Feature Importances
-                  </h3>
-                  <div className="space-y-4">
-                    {dashboardData?.feature_importance.sort((a, b) => b.importance - a.importance).map((feature, i) => (
-                      <div key={i} className="flex items-center gap-4 bg-gray-800 p-4 rounded-xl border border-gray-700/50">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-sm shadow-inner ${i === 0 ? 'bg-orange-500 text-white' : i === 1 ? 'bg-amber-500 text-white' : 'bg-gray-700 text-gray-400'
-                          }`}>
-                          {i + 1}
-                        </div>
-                        <div className="w-32 text-gray-200 font-bold">{feature.name}</div>
-                        <div className="flex-1 bg-gray-900 rounded-full h-4 border border-gray-700/50 overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-orange-600 to-amber-400 shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
-                            style={{ width: `${feature.importance}%`, transition: 'width 1s ease-out' }}
-                          />
-                        </div>
-                        <div className="w-16 text-right font-black text-gray-400 tabular-nums">{feature.importance.toFixed(1)}%</div>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
               </motion.div>
             )}
 
@@ -399,7 +375,6 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
                     <thead className="bg-gray-800/80 border-b border-gray-700">
                       <tr>
                         <th className="px-6 py-5 text-left text-gray-400 font-bold uppercase tracking-wider">Student Name</th>
-                        <th className="px-6 py-5 text-left text-gray-400 font-bold uppercase tracking-wider">Roll No</th>
                         <th className="px-6 py-5 text-left text-gray-400 font-bold uppercase tracking-wider">Target %ile</th>
                         <th className="px-6 py-5 text-left text-gray-400 font-bold uppercase tracking-wider">Engine Conf</th>
                         <th className="px-6 py-5 text-left text-gray-400 font-bold uppercase tracking-wider">Timestamp</th>
@@ -407,7 +382,7 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
                     </thead>
                     <tbody className="divide-y divide-gray-800">
                       {predictions.length === 0 ? (
-                        <tr><td colSpan={5} className="py-24 text-center text-gray-500 font-bold text-lg"><Calendar className="mx-auto mb-4 opacity-50" size={40} />No prediction records found</td></tr>
+                        <tr><td colSpan={4} className="py-24 text-center text-gray-500 font-bold text-lg"><Calendar className="mx-auto mb-4 opacity-50" size={40} />No prediction records found</td></tr>
                       ) : (
                         predictions.map((pred, i) => (
                           <motion.tr
@@ -417,7 +392,6 @@ export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) 
                             className="hover:bg-gray-800/50 transition-colors"
                           >
                             <td className="px-6 py-5 text-white font-bold">{pred.student_name}</td>
-                            <td className="px-6 py-5 text-gray-400 font-mono">{pred.roll_number}</td>
                             <td className="px-6 py-5">
                               <span className={`font-black text-lg ${getPercentileColor(pred.predicted_percentile)}`}>
                                 {pred.predicted_percentile.toFixed(1)}%

@@ -23,3 +23,6 @@
 Hackathon-3 Project proposal.docx
 Hackathon-3 Project proposal.pdf
 Dashboard/import.ipynb
+__pycache__/
+*.pyc
+*.pyo

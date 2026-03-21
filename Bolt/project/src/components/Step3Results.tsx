@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import Plot from 'react-plotly.js';
 import CountUp from 'react-countup';
-import { Download, Award, TrendingUp, AlertCircle, Lightbulb, ArrowLeft, ChartBar } from 'lucide-react';
+import { Download, Award, TrendingUp, AlertCircle, BarChart3, BarChart2, Lightbulb, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import API from '../utils/api';
 import { PredictionResult, Statistics } from '../types';
 import { generatePDF } from '../utils/pdfGenerator';
 
@@ -11,17 +13,52 @@ interface Step3ResultsProps {
   onBack: () => void;
 }
 
-const subjectNames = ['Calculus-1', 'Calculus-2', 'Python-1', 'Python-2', 'SM-1'];
-const subjectKeys: (keyof PredictionResult['scores'])[] = ['calculus_1', 'calculus_2', 'python_1', 'python_2', 'sm_1'];
+const subjectNames = [
+  'Python-1', 'SQL', 'Calculus-1', 'Python-2', 'Hackathon-1',
+  'Calculus-2', 'SM-1', 'Linear Algebra', 'Discrete Mathematics',
+  'Hackathon-2', 'DSA'
+];
+const subjectKeys: (keyof PredictionResult['scores'])[] = [
+  'python_1', 'sql', 'calculus_1', 'python_2', 'hackathon_1',
+  'calculus_2', 'sm_1', 'linear_algebra', 'discrete_mathematics',
+  'hackathon_2', 'dsa'
+];
 
 // Framer motion constants
 const sidebarContainer = { show: { transition: { staggerChildren: 0.1, delayChildren: 0.2 } } };
 const sidebarCard = { hidden: { opacity: 0, x: 20 }, show: { opacity: 1, x: 0, transition: { duration: 0.3 } } };
 const tableContainer = { show: { transition: { staggerChildren: 0.05, delayChildren: 0.1 } } };
 const tableRow = { hidden: { opacity: 0, x: -10 }, show: { opacity: 1, x: 0, transition: { duration: 0.2 } } };
-const hoverLift = { whileHover: { scale: 1.02, y: -2 }, transition: { type: "spring", stiffness: 200 } };
+const hoverLift = { whileHover: { scale: 1.02, y: -2 }, transition: { duration: 0.2 } };
 
 export default function Step3Results({ result, statistics, onBack }: Step3ResultsProps) {
+  const [bestModel, setBestModel] = useState<{
+    name: string;
+    accuracy: number;
+  } | null>(null);
+
+  useEffect(() => {
+    API.get('/dashboard-data').then(res => {
+      const best = res.data.models.find(
+        (m: { is_best: boolean }) => m.is_best
+      );
+      if (best) setBestModel(best);
+    }).catch(() => {});
+  }, []);
+
+  if (!result || !result.scores || !statistics) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-gray-900/80 backdrop-blur-md rounded-2xl border border-gray-700/60 shadow-xl max-w-2xl mx-auto mt-20">
+        <AlertCircle size={48} className="text-pink-500 mb-6 animate-pulse" />
+        <h2 className="text-2xl font-bold text-white mb-2">Resolving Results...</h2>
+        <p className="text-gray-400 mb-6">If this screen persists, there might have been an error generating your prediction. Please verify the backend connection.</p>
+        <button onClick={onBack} className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-bold flex items-center justify-center gap-2">
+          <ArrowLeft size={18} /> Retry
+        </button>
+      </div>
+    );
+  }
+
   const getGradeColor = (grade: string) => {
     const cls: Record<string, string> = {
       'A+': 'from-emerald-500 to-green-600', 'A': 'from-green-500 to-green-700',
@@ -37,9 +74,10 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
     if (pct >= 61) return 'B'; if (pct >= 51) return 'C'; if (pct >= 36) return 'D'; return 'F';
   };
 
-  const userScores = subjectKeys.map(k => result.scores[k]);
-  const classAverages = subjectNames.map(n => statistics[n]?.mean || 0);
-  const avgPercentile = userScores.reduce((a, b) => a + b, 0) / userScores.length;
+  const currentScores = result?.scores || {};
+  const userScores = subjectKeys.map(k => currentScores[k] || 0);
+  const classAverages = subjectNames.map(n => statistics?.[n]?.mean || 0);
+  const avgPercentile = userScores.reduce((a, b) => a + b, 0) / (userScores.length || 1);
   const strongSubjects = subjectNames.filter((_, i) => userScores[i] >= 70);
   const weakSubjects = subjectNames.filter((_, i) => userScores[i] < 60);
 
@@ -56,32 +94,52 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <div className="w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl mix-blend-overlay"></div>
         </div>
-        
+
         <p className="text-white/80 text-sm font-bold uppercase tracking-[0.2em] mb-3">Predicted Percentile</p>
-        
+
         <div className="text-7xl lg:text-8xl font-black text-white mb-6 drop-shadow-[0_0_25px_rgba(255,255,255,0.4)] tabular-nums animate-pulse tracking-tight">
-          <CountUp end={result.predicted_percentile} duration={1.5} decimals={2} suffix="%" />
+          <CountUp end={result?.predicted_percentile || 0} duration={1.5} decimals={2} suffix="%" />
         </div>
-        
-        <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.4, type: "spring", stiffness: 200 }} className={`inline-flex items-center px-10 py-3 bg-gradient-to-r ${getGradeColor(result.grade)} rounded-full shadow-2xl mb-6 border border-white/20`}>
-          <span className="text-4xl font-black text-white">{result.grade}</span>
+
+        <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.4, type: "spring", stiffness: 200 }} className={`inline-flex items-center px-10 py-3 bg-gradient-to-r ${getGradeColor(result?.grade || 'N/A')} rounded-full shadow-2xl mb-6 border border-white/20`}>
+          <span className="text-4xl font-black text-white">{result?.grade || 'N/A'}</span>
         </motion.div>
-        
+
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="flex justify-center gap-6 text-white/90 text-sm md:text-base font-medium">
-          <span className="bg-black/20 px-4 py-2 rounded-lg backdrop-blur-md border border-white/10">Range: <b className="text-white ml-1">{result.percentile_range}</b></span>
-          <span className="bg-black/20 px-4 py-2 rounded-lg backdrop-blur-md border border-white/10">Confidence: <b className="text-white ml-1"><CountUp end={result.confidence} duration={1.5} decimals={1} delay={0.2} suffix="%" /></b></span>
+          <span className="bg-black/20 px-4 py-2 rounded-lg backdrop-blur-md border border-white/10">Range: <b className="text-white ml-1">{result?.percentile_range || 'N/A'}</b></span>
+          <span className="bg-black/20 px-4 py-2 rounded-lg backdrop-blur-md border border-white/10">Confidence: <b className="text-white ml-1"><CountUp end={result?.confidence || 0} duration={1.5} decimals={1} delay={0.2} suffix="%" /></b></span>
         </motion.div>
       </motion.div>
+
+      <div className="flex justify-center mt-4 mb-2">
+        {bestModel && (
+          <div className="flex items-center gap-3 px-5 py-2 
+            bg-gray-800 border border-gray-600 rounded-full 
+            shadow-md">
+            <div className="w-2 h-2 rounded-full bg-green-400" />
+            <span className="text-gray-400 text-sm">
+              Predicted by
+            </span>
+            <span className="text-white text-sm font-semibold">
+              {bestModel.name}
+            </span>
+            <div className="w-px h-4 bg-gray-600" />
+            <span className="text-green-400 text-sm font-semibold">
+              R² {bestModel.accuracy.toFixed(1)}%
+            </span>
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <motion.div {...hoverLift} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className={cardStyle}>
-            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3"><ChartBar className="text-purple-400"/> Subject Comparison</h3>
+            <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3"><BarChart2 className="text-purple-400" /> Subject Comparison</h3>
             <Plot data={chartData} layout={{ paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#d1d5db' }, xaxis: { gridcolor: '#374151', tickangle: -20 }, yaxis: { gridcolor: '#374151', range: [0, 105] }, barmode: 'group', margin: { t: 10, b: 40, l: 40, r: 10 }, legend: { orientation: 'h', y: 1.15 } }} config={{ responsive: true, displayModeBar: false }} style={{ width: '100%', height: '320px' }} />
           </motion.div>
 
           <motion.div {...hoverLift} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className={`${cardStyle} overflow-hidden px-0 pb-0`}>
-            <h3 className="text-xl font-bold text-white mb-4 px-6 flex items-center gap-3"><Award className="text-pink-400"/> Performance Matrix</h3>
+            <h3 className="text-xl font-bold text-white mb-4 px-6 flex items-center gap-3"><Award className="text-pink-400" /> Performance Matrix</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm whitespace-nowrap">
                 <thead className="bg-gray-800/80 border-y border-gray-700">

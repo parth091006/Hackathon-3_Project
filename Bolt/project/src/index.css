@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  background-color: #111827;
+  color: #ffffff;
+  margin: 0;
+  padding: 0;
+}
+
 /* Remove number input spinner (Chrome, Safari, Edge, Opera) */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

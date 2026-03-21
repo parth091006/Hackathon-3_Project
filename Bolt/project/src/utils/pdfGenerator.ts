@@ -46,9 +46,7 @@ export const generatePDF = (
   doc.setFontSize(11);
   doc.setFont('helvetica', 'normal');
   doc.text(`Name: ${result.profile.full_name}`, 14, 60);
-  doc.text(`Roll Number: ${result.profile.roll_number}`, 14, 68);
-  doc.text(`Branch: ${result.profile.branch}`, 14, 76);
-  doc.text(`Year: ${result.profile.year}`, 14, 84);
+  doc.text(`Branch: ${result.profile.branch}`, 14, 68);
 
   // Subject Performance Table
   doc.setFontSize(16);
@@ -114,7 +112,7 @@ export const generatePDF = (
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
   doc.text(`Predicted Percentile: ${result.predicted_percentile.toFixed(2)}%`, 14, lastY2 + 10);
-  doc.text(`Predicted Percentile: ${result.grade}`, 14, lastY2 + 20);
+  doc.text(`Predicted Grade: ${result.grade}`, 14, lastY2 + 20);
   doc.text(`Confidence Score: ${result.confidence.toFixed(2)}%`, 14, lastY2 + 30);
   doc.text(`Percentile Range: ${result.percentile_range}`, 14, lastY2 + 40);
 
@@ -124,41 +122,32 @@ export const generatePDF = (
   const strongSubjects = subjectNames.filter((_, idx) => userScores[idx] >= 70);
   const weakSubjects = subjectNames.filter((_, idx) => userScores[idx] < 60);
 
-  // Add new page for detailed analysis
-  doc.addPage();
-
-  // Second page header
-  doc.setFillColor(139, 92, 246);
-  doc.rect(0, 0, 210, 30, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(20);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Performance Analysis', 105, 18, { align: 'center' });
+  // Performance analytics — flows inline after Prediction Summary (no page break)
+  const perfStartY = lastY2 + 60;
 
   // Overall Performance Section
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('Overall Performance', 14, 45);
+  doc.text('Overall Performance', 14, perfStartY);
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Average Percentile: ${avgPercentile.toFixed(2)}%`, 14, 55);
-  doc.text(`Strong Subjects (≥70%): ${strongSubjects.length}`, 14, 65);
+  doc.text(`Average Percentile: ${avgPercentile.toFixed(2)}%`, 14, perfStartY + 10);
+  doc.text(`Strong Subjects (above 70%): ${strongSubjects.length}`, 14, perfStartY + 20);
   if (strongSubjects.length > 0) {
-    doc.text(`  - ${strongSubjects.join(', ')}`, 14, 73);
+    doc.text(`  - ${strongSubjects.join(', ')}`, 14, perfStartY + 28);
   }
 
-  doc.text(`Weak Subjects (<60%): ${weakSubjects.length}`, 14, 83);
+  doc.text(`Weak Subjects (below 60%): ${weakSubjects.length}`, 14, perfStartY + 38);
   if (weakSubjects.length > 0) {
-    doc.text(`  - ${weakSubjects.join(', ')}`, 14, 91);
+    doc.text(`  - ${weakSubjects.join(', ')}`, 14, perfStartY + 46);
   }
 
   // Performance Evaluation Section
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('Performance Evaluation', 14, 110);
+  doc.text('Performance Evaluation', 14, perfStartY + 65);
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
@@ -172,12 +161,12 @@ export const generatePDF = (
   } else {
     evaluation = 'Poor - Significant improvement needed';
   }
-  doc.text(evaluation, 14, 120);
+  doc.text(evaluation, 14, perfStartY + 75);
 
   // Risk Assessment Section
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('Risk Assessment', 14, 140);
+  doc.text('Risk Assessment', 14, perfStartY + 95);
 
   doc.setFontSize(12);
   doc.setFont('helvetica', 'normal');
@@ -189,19 +178,19 @@ export const generatePDF = (
   } else {
     riskLevel = 'High Risk - Student requires immediate attention and support';
   }
-  doc.text(riskLevel, 14, 150);
+  doc.text(riskLevel, 14, perfStartY + 105);
 
   // Recommendations Section (only if weak subjects exist)
   if (weakSubjects.length > 0) {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('Recommendations', 14, 170);
+    doc.text('Recommendations', 14, perfStartY + 125);
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text('Focus on improving the following subjects:', 14, 180);
+    doc.text('Focus on improving the following subjects:', 14, perfStartY + 135);
     weakSubjects.forEach((subject, idx) => {
-      doc.text(`${idx + 1}. ${subject}`, 20, 190 + (idx * 8));
+      doc.text(`${idx + 1}. ${subject}`, 20, perfStartY + 145 + (idx * 8));
     });
   }
 

@@ -1,24 +1,26 @@
-# Standard Python libraries
 import os
+import json
 from typing import Dict, List
 
-# Third-party libraries
 import joblib
 import numpy as np
 import pandas as pd
 import sqlite3
 from sklearn.model_selection import train_test_split
 
-# Feature Scaling & Pipeline
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
-# Regression Models
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import (
+    RandomForestRegressor,
+    GradientBoostingRegressor,
+    ExtraTreesRegressor
+)
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor
 
-# Regression Metrics
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
 # PATH SETUP
@@ -51,20 +53,23 @@ print(f"Dataset loaded - Shape: {df.shape}")
 
 # DATA PREPROCESSING - Define required and feature columns
 required_columns = [
-    "Calculus-1",
-    "Calculus-2", 
-    "Python-1",
-    "Python-2",
-    "SM-1",
-    "SM-2",
+    "Python-1", "SQL", "Calculus-1", "Python-2", "Hackathon-1",
+    "Calculus-2", "SM-1", "Linear Algebra", "Discrete Mathematics",
+    "Hackathon-2", "DSA", "SM-2"
 ]
 
 feature_columns = [
+    "Python-1",
+    "SQL",
     "Calculus-1",
-    "Calculus-2",
-    "Python-1", 
     "Python-2",
+    "Hackathon-1",
+    "Calculus-2",
     "SM-1",
+    "Linear Algebra",
+    "Discrete Mathematics",
+    "Hackathon-2",
+    "DSA",
 ]
 
 # Convert only numeric columns to numeric
@@ -120,20 +125,52 @@ models = {
         ("model", LinearRegression())
     ]),
 
+
+
+    "SVR": Pipeline([
+        ("scaler", StandardScaler()),
+        ("model", SVR(kernel='rbf', C=100, gamma=0.1, epsilon=0.1))
+    ]),
+
+    "KNN Regressor": Pipeline([
+        ("scaler", StandardScaler()),
+        ("model", KNeighborsRegressor(n_neighbors=5))
+    ]),
+
     "Decision Tree": DecisionTreeRegressor(
-        random_state=42
+        random_state=42,
+        max_depth=10,
+        min_samples_leaf=5,
+        min_samples_split=10
     ),
 
     "Random Forest": RandomForestRegressor(
         random_state=42,
-        n_estimators=200
-    )
+        n_estimators=200,
+        max_depth=15,
+        min_samples_leaf=3
+    ),
+
+    "Gradient Boosting": GradientBoostingRegressor(
+        random_state=42,
+        n_estimators=200,
+        learning_rate=0.1,
+        max_depth=5
+    ),
+
+    "Extra Trees": ExtraTreesRegressor(
+        random_state=42,
+        n_estimators=200,
+        max_depth=15,
+        min_samples_leaf=3
+    ),
 }
 
 # MODEL TRAINING & EVALUATION
 best_model = None
 best_model_name = ""
 best_r2 = -999
+best_rmse = 999
 
 results = []
 
@@ -163,9 +200,9 @@ for name, model in models.items():
         "R2": r2
     })
 
-    # Track best model based on R² score
-    if r2 > best_r2:
-        best_r2 = r2
+    # Track best model based on lowest RMSE
+    if best_model is None or rmse < best_rmse:
+        best_rmse = rmse
         best_model = model
         best_model_name = name
 
@@ -176,7 +213,7 @@ print("\nMODEL COMPARISON")
 print(results_df.to_string(index=False))
 
 print(f"\nBest Model: {best_model_name}")
-print(f"Best R² Score: {best_r2:.4f}")
+print(f"Best RMSE: {best_rmse:.4f}")
 
 # SAVE BEST MODEL - Persist model for API deployment
 print("\n" + "=" * 60)
@@ -196,6 +233,34 @@ try:
         print(f"Model file size: {file_size:.2f} KB")
     else:
         raise FileNotFoundError("Model file not created!")
+
+    metrics_path = os.path.join(script_dir, "model_metrics.json")
+    metrics_data = {
+        "best_model_name": best_model_name,
+        "best_r2": round(best_r2, 4),
+        "best_rmse": round(
+            float(results_df[
+                results_df['Model'] == best_model_name
+            ]['RMSE'].values[0]), 4
+        ),
+        "best_mae": round(
+            float(results_df[
+                results_df['Model'] == best_model_name
+            ]['MAE'].values[0]), 4
+        ),
+        "all_results": [
+            {
+                "Model": r["Model"],
+                "MAE": round(float(r["MAE"]), 4),
+                "RMSE": round(float(r["RMSE"]), 4),
+                "R2": round(float(r["R2"]), 4)
+            }
+            for r in results_df.to_dict(orient='records')
+        ]
+    }
+    with open(metrics_path, 'w') as f:
+        json.dump(metrics_data, f, indent=2)
+    print(f"Metrics saved to: {metrics_path}")
         
 except Exception as e:
     raise IOError(f"Failed to save model: {e}")
@@ -205,7 +270,7 @@ print("\n" + "=" * 60)
 print("TRAINING COMPLETE")
 print("=" * 60)
 print(f"Model Type: {best_model_name}")
-print(f"Best R² Score: {best_r2:.4f}")
+print(f"Best RMSE: {best_rmse:.4f}")
 print(f"Feature Schema: {list(X.columns)}")
 print(f"Model Path: {model_path}")
 print("=" * 60)

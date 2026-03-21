@@ -10,7 +10,7 @@ import sqlite3
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.dirname(script_dir)
 
-csv_path = os.path.join(project_dir, "Dataset", "student_dataset_.csv")
+csv_path = os.path.join(project_dir, "Dataset", "Student_Dataset.csv")
 db_path = os.path.join(script_dir, "grades.db")
 
 print("=" * 60)
@@ -38,15 +38,20 @@ try:
     
     # Validate required columns for model training
     required_columns = [
-        "Sr No.",
         "Name",
-        "Roll No", 
+        "Roll No",
         "Branch",
-        "Calculus-1", 
-        "Calculus-2", 
-        "Python-1", 
-        "Python-2", 
-        "SM-1", 
+        "Python-1",
+        "SQL",
+        "Calculus-1",
+        "Python-2",
+        "Hackathon-1",
+        "Calculus-2",
+        "SM-1",
+        "Linear Algebra",
+        "Discrete Mathematics",
+        "Hackathon-2",
+        "DSA",
         "SM-2"
     ]
     
