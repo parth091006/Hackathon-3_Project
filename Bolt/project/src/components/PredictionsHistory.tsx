@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CountUp from 'react-countup';
 import API from '../utils/api';
 import {
-  ArrowLeft, Calendar, User, TrendingUp, Percent,
+  ArrowLeft, Calendar, TrendingUp,
   Star, BarChart3, Target, Users, Brain, Activity, Database
 } from 'lucide-react';
 
@@ -74,7 +74,7 @@ const tabContent = {
 const cardHover = {
   whileHover: { scale: 1.02, y: -2, transition: { type: "spring", stiffness: 300, damping: 20 } },
   className: "transition-all duration-200"
-};
+} as const;
 
 const modelContainer = {
   hidden: { opacity: 0 },
@@ -84,7 +84,7 @@ const modelContainer = {
 const modelRow = {
   hidden: { opacity: 0, x: -20 },
   show: { opacity: 1, x: 0, transition: { type: "spring", stiffness: 200 } }
-};
+} as const;
 
 export default function PredictionsHistory({ onBack }: PredictionsHistoryProps) {
   console.log("Component loaded");

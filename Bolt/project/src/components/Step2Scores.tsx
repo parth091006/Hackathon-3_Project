@@ -33,7 +33,7 @@ const container = {
 const cardItem = {
   hidden: { opacity: 0, y: 15 },
   show: { opacity: 1, y: 0, transition: { type: "spring", damping: 20, stiffness: 300 } }
-};
+} as const;
 
 export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2ScoresProps) {
   const [statistics, setStatistics] = useState<Statistics | null>(null);

@@ -25,7 +25,7 @@ const pageTransition = {
   type: "tween",
   ease: "anticipate",
   duration: 0.4
-};
+} as const;
 
 // Skeleton Loader Component
 const SkeletonLoader = () => (
@@ -49,7 +49,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
     super(props);
     this.state = { hasError: false };
   }
-  static getDerivedStateFromError(error: any) {
+  static getDerivedStateFromError(_error: any) {
     return { hasError: true };
   }
   componentDidCatch(error: any, errorInfo: any) {

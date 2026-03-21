@@ -15,8 +15,8 @@ const fieldVariants = {
     opacity: 1,
     y: 0,
     transition: { delay: i * 0.1 + 0.2, duration: 0.4, ease: "easeOut" }
-  })
-};
+  } as const)
+} as const;
 
 export default function Step1Profile({ profile, setProfile, onNext }: Step1ProfileProps) {
   const handleSubmit = (e: React.FormEvent) => {

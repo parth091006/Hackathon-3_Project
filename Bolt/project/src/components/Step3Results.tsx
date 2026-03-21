@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
+// @ts-ignore
 import Plot from 'react-plotly.js';
 import CountUp from 'react-countup';
-import { Download, Award, TrendingUp, AlertCircle, BarChart3, BarChart2, Lightbulb, ArrowLeft } from 'lucide-react';
+import { Download, Award, TrendingUp, AlertCircle, BarChart2, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import API from '../utils/api';
 import { PredictionResult, Statistics } from '../types';
