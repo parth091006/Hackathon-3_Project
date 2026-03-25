@@ -1,28 +1,49 @@
-# VS Code
+# VS Code / IDE
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db
 
 # Database
 *.db
 
 # ML Models
 *.pkl
+*.joblib
+*.h5
+*.pt
+*.pth
+*.onnx
 
-# Zip files
+# Zip / archives
 *.zip
 
-# Jupyter checkpoints
-.ipynb_checkpoints/
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
 
-# Jupyter checkpoints
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
 .ipynb_checkpoints/
 
 # Backup files
 *_backup.py
 
-# Project proposal files
+# Generated training outputs
+Training/baseline_metrics.json
+Training/model_metrics.csv
+Training/model_metrics.json
+Training/updated_model_metrics.json
+
+# Proposal / personal docs
 Hackathon-3 Project proposal.docx
 Hackathon-3 Project proposal.pdf
+
+# Notebook / temp experiment files
 Dashboard/import.ipynb
-__pycache__/
-*.pyc
-*.pyo
