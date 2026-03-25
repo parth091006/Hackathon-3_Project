@@ -124,9 +124,9 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
                       <div className="flex justify-between items-center bg-gray-800 p-2 rounded-lg">
                         <span className="text-gray-400">Status</span>
                         {currentScore >= classAvg ? (
-                          <span className="px-2 py-0.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded-md text-xs font-bold">Above Avg</span>
+                          <span className="inline-flex items-center justify-center min-w-[72px] px-3 py-1 bg-green-500/10 text-green-400 border border-green-500/20 rounded-md text-xs font-bold whitespace-nowrap shrink-0">Above Avg</span>
                         ) : (
-                          <span className="px-2 py-0.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md text-xs font-bold">Below Avg</span>
+                          <span className="inline-flex items-center justify-center min-w-[72px] px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-md text-xs font-bold whitespace-nowrap shrink-0">Below Avg</span>
                         )}
                       </div>
 
@@ -153,7 +153,7 @@ export default function Step2Scores({ scores, setScores, onNext, onBack }: Step2
               whileTap={{ scale: 0.95 }}
               className="px-10 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-xl shadow-lg hover:shadow-purple-500/30 transition-all"
             >
-              Discover Percentile →
+              Predict Percentile →
             </motion.button>
           </div>
         </form>

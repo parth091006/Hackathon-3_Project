@@ -1,183 +1,121 @@
-import pandas as pd
-import numpy as np
+import pandas as pd    
 import subprocess
 import os
 import sys
-from faker import Faker
 from datetime import datetime
 
-fake = Faker()
-np.random.seed(None)  # Different results each run
-
-# ─────────────────────────────────────────
-# CONFIG
-# ─────────────────────────────────────────
 SCRIPT_DIR   = os.path.dirname(os.path.abspath(__file__))
 DATASET_PATH = os.path.join(SCRIPT_DIR, "Dataset", "Student_Dataset.csv")
 DB_SCRIPT    = os.path.join(SCRIPT_DIR, "Database", "load_to_sql.py")
 TRAIN_SCRIPT = os.path.join(SCRIPT_DIR, "Training", "train_model.py")
 
-NEW_ROWS = 50  # Number of new students to generate
+def add_student_and_retrain(
+    name,
+    branch,
+    python_1,
+    sql,
+    calculus_1,
+    python_2,
+    hackathon_1,
+    calculus_2,
+    sm_1,
+    linear_algebra,
+    discrete_mathematics,
+    hackathon_2,
+    dsa,
+    predicted_sm2
+):
+    print("DATA GENERATOR - NEW STUDENT PIPELINE")
+    print(f"Student  : {name}")
+    print(f"Branch   : {branch}")
 
-BRANCHES = ["B.Tech CSE", "B.Tech AIML", "B.Tech AIDS"]
+    # STEP 1: Load existing dataset
+    if not os.path.exists(DATASET_PATH):
+        print(f"ERROR: Dataset not found at {DATASET_PATH}")
+        sys.exit(1)
 
-# ─────────────────────────────────────────
-# STEP 1: Load existing dataset
-# ─────────────────────────────────────────
-print("=" * 60)
-print("DATA GENERATOR - PIPELINE TRIGGER")
-print("=" * 60)
+    df_existing = pd.read_csv(DATASET_PATH)
+    existing_count = len(df_existing)
+    print(f"Existing students: {existing_count}")
 
-if not os.path.exists(DATASET_PATH):
-    print(f"ERROR: Dataset not found at {DATASET_PATH}")
-    sys.exit(1)
+    # STEP 2: Generate Roll No. after last Roll No. in dataset
+    last_sr   = int(df_existing["Sr No."].iloc[-1])
+    last_roll = df_existing["Roll No"].iloc[-1]
+    last_num  = int(last_roll.replace("STU", ""))
 
-df_existing = pd.read_csv(DATASET_PATH)
-existing_count = len(df_existing)
-print(f"Existing students: {existing_count}")
+    new_sr   = last_sr + 1
+    new_roll = f"STU{(last_num + 1):04d}"
 
-# Get last roll number to continue sequence
-last_roll = df_existing["Roll No"].iloc[-1]
-last_num  = int(last_roll.replace("STU", ""))
+    print(f"Roll No assigned: {new_roll}")
 
-# ─────────────────────────────────────────
-# STEP 2: Generate new student rows
-# ─────────────────────────────────────────
-print(f"Generating {NEW_ROWS} new student rows...")
+    # STEP 3: Build the new student row
+    new_row = {
+        "Sr No."               : new_sr,
+        "Name"                 : name,
+        "Roll No"              : new_roll,
+        "Branch"               : branch,
+        "Python-1"             : round(float(python_1), 2),
+        "SQL"                  : round(float(sql), 2),
+        "Calculus-1"           : round(float(calculus_1), 2),
+        "Python-2"             : round(float(python_2), 2),
+        "Hackathon-1"          : round(float(hackathon_1), 2),
+        "Calculus-2"           : round(float(calculus_2), 2),
+        "SM-1"                 : round(float(sm_1), 2),
+        "Linear Algebra"       : round(float(linear_algebra), 2),
+        "Discrete Mathematics" : round(float(discrete_mathematics), 2),
+        "Hackathon-2"          : round(float(hackathon_2), 2),
+        "DSA"                  : round(float(dsa), 2),
+        "SM-2"                 : round(float(predicted_sm2), 2),
+    }
 
-# Use existing data statistics for realistic generation
-feature_cols = [
-    "Python-1", "SQL", "Calculus-1", "Python-2", "Hackathon-1",
-    "Calculus-2", "SM-1", "Linear Algebra", "Discrete Mathematics",
-    "Hackathon-2", "DSA"
-]
+    new_df = pd.DataFrame([new_row])
 
-means = df_existing[feature_cols].mean()
-stds  = df_existing[feature_cols].std()
+    # STEP 4: Append new student to existing dataset
+    new_df.to_csv(DATASET_PATH, mode='a', header=False, index=False)
+    print(f"Student added: {existing_count} → {existing_count + 1} students")
+    print(f"Saved to: {DATASET_PATH}")
 
-new_rows = []
+    # STEP 5: Auto-trigger load_to_sql.py
+    print("TRIGGERING DATABASE UPDATE")
 
-for i in range(NEW_ROWS):
-    row = {}
-
-    # Base subjects
-    row["Python-1"]   = np.clip(np.random.normal(means["Python-1"],   stds["Python-1"]),   0, 100)
-    row["Calculus-1"] = np.clip(np.random.normal(means["Calculus-1"], stds["Calculus-1"]), 0, 100)
-    row["SM-1"]       = np.clip(np.random.normal(means["SM-1"],       stds["SM-1"]),       0, 100)
-
-    # Progressions
-    row["Python-2"]   = np.clip(row["Python-1"]   + np.random.normal(5, 5),  0, 100)
-    row["Calculus-2"] = np.clip(row["Calculus-1"] + np.random.normal(3, 5),  0, 100)
-
-    # Derived subjects
-    row["SQL"]         = np.clip(row["Python-1"]  + np.random.normal(0, 10), 0, 100)
-    row["DSA"]         = np.clip(row["Python-1"]  + np.random.normal(2, 10), 0, 100)
-    row["Hackathon-1"] = np.clip(row["Python-2"]  + np.random.normal(0, 10), 0, 100)
-    row["Hackathon-2"] = np.clip(row["Python-2"]  + np.random.normal(0, 10), 0, 100)
-
-    row["Linear Algebra"] = np.clip(
-        row["SM-1"] + np.random.normal(0, 5), 0, 100
-    )
-    row["Discrete Mathematics"] = np.clip(
-        row["SM-1"] * 0.6 + row["Calculus-1"] * 0.4 +
-        np.random.normal(0, 8), 0, 100
-    )
-
-    # Target: SM-2 as weighted average of all inputs
-    row["SM-2"] = np.clip(
-        row["Python-1"]             * 0.10 +
-        row["SQL"]                  * 0.08 +
-        row["Calculus-1"]           * 0.10 +
-        row["Python-2"]             * 0.10 +
-        row["Hackathon-1"]          * 0.08 +
-        row["Calculus-2"]           * 0.10 +
-        row["SM-1"]                 * 0.12 +
-        row["Linear Algebra"]       * 0.10 +
-        row["Discrete Mathematics"] * 0.10 +
-        row["Hackathon-2"]          * 0.07 +
-        row["DSA"]                  * 0.05 +
-        np.random.normal(0, 3),
-        0, 100
+    result = subprocess.run(
+        [sys.executable, DB_SCRIPT],
+        capture_output=True, text=True
     )
 
-    new_roll = f"STU{(last_num + i + 1):04d}"
-    row["Name"]    = fake.name()
-    row["Roll No"] = new_roll
-    row["Branch"]  = np.random.choice(BRANCHES)
+    if result.returncode == 0:
+        print("Database updated successfully")
+    else:
+        print("ERROR updating database:")
+        print(result.stderr)
+        sys.exit(1)
 
-    new_rows.append(row)
+    # STEP 6: Auto-trigger train_model.py
+    print("TRIGGERING MODEL RETRAINING")
 
-new_df = pd.DataFrame(new_rows)
+    result = subprocess.run(
+        [sys.executable, TRAIN_SCRIPT],
+        capture_output=True, text=True
+    )
 
-# Reorder columns to match existing dataset
-new_df = new_df[[
-    "Name", "Roll No", "Branch",
-    "Python-1", "SQL", "Calculus-1", "Python-2", "Hackathon-1",
-    "Calculus-2", "SM-1", "Linear Algebra", "Discrete Mathematics",
-    "Hackathon-2", "DSA", "SM-2"
-]].round(2)
+    if result.returncode == 0:
+        for line in result.stdout.split('\n'):
+            if any(x in line for x in [
+                'Best Model:', 'Best R²', 'Train size',
+                'RMSE', 'MAE', 'R²', 'Metrics saved'
+            ]):
+                print(line)
+    else:
+        print("ERROR during model retraining:")
+        print(result.stderr)
+        sys.exit(1)
 
-# ─────────────────────────────────────────
-# STEP 3: Append to existing dataset
-# ─────────────────────────────────────────
-new_df.to_csv(DATASET_PATH, mode='a', header=False, index=False)
-new_count = existing_count + NEW_ROWS
-print(f"Dataset updated: {existing_count} → {new_count} students")
-print(f"Saved to: {DATASET_PATH}")
+    # SUMMARY
+    print("PIPELINE COMPLETE")
+    print(f"Timestamp  : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Student    : {name} ({new_roll})")
+    print(f"Total rows : {existing_count + 1}")
+    print(f"Model      : retrained and saved")
+    print(f"Dashboard  : refresh browser to see updated metrics")
 
-# ─────────────────────────────────────────
-# STEP 4: Auto-trigger load_to_sql.py
-# ─────────────────────────────────────────
-print("\n" + "=" * 60)
-print("TRIGGERING DATABASE UPDATE")
-print("=" * 60)
-
-result = subprocess.run(
-    [sys.executable, DB_SCRIPT],
-    capture_output=True, text=True
-)
-
-if result.returncode == 0:
-    print("Database updated successfully")
-else:
-    print("ERROR updating database:")
-    print(result.stderr)
-    sys.exit(1)
-
-# ─────────────────────────────────────────
-# STEP 5: Auto-trigger train_model.py
-# ─────────────────────────────────────────
-print("\n" + "=" * 60)
-print("TRIGGERING MODEL RETRAINING")
-print("=" * 60)
-
-result = subprocess.run(
-    [sys.executable, TRAIN_SCRIPT],
-    capture_output=True, text=True
-)
-
-if result.returncode == 0:
-    # Extract key metrics from output
-    for line in result.stdout.split('\n'):
-        if any(x in line for x in [
-            'Best Model:', 'Best R²', 'Train size',
-            'RMSE', 'MAE', 'R²', 'Metrics saved'
-        ]):
-            print(line)
-else:
-    print("ERROR during model retraining:")
-    print(result.stderr)
-    sys.exit(1)
-
-# ─────────────────────────────────────────
-# SUMMARY
-# ─────────────────────────────────────────
-print("\n" + "=" * 60)
-print("PIPELINE COMPLETE")
-print("=" * 60)
-print(f"Timestamp  : {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-print(f"New rows   : {NEW_ROWS}")
-print(f"Total rows : {new_count}")
-print(f"Model      : retrained and saved")
-print(f"Dashboard  : refresh browser to see updated metrics")
-print("=" * 60)
+    return new_roll

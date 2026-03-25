@@ -29,9 +29,9 @@ const pageTransition = {
 
 // Skeleton Loader Component
 const SkeletonLoader = () => (
-  <motion.div 
-    initial={{ opacity: 0 }} 
-    animate={{ opacity: 1 }} 
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
     className="w-full max-w-6xl mx-auto space-y-6"
   >
@@ -44,7 +44,7 @@ const SkeletonLoader = () => (
   </motion.div>
 );
 
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: any) {
     super(props);
     this.state = { hasError: false };
@@ -158,7 +158,7 @@ function App() {
         <div className="w-full max-w-[2000px] mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <motion.div 
+              <motion.div
                 whileHover={{ rotate: 5, scale: 1.05 }}
                 className="bg-white/20 backdrop-blur-sm p-3 rounded-xl cursor-default"
               >
@@ -168,7 +168,7 @@ function App() {
                 <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">Student Percentile Prediction</h1>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-4 w-full md:w-auto justify-end">
               {step === 1 && (
                 <motion.button
@@ -179,7 +179,7 @@ function App() {
                   className="flex items-center gap-2 px-5 py-2.5 bg-white/10 border border-white/20 backdrop-blur-sm text-white font-medium rounded-xl hover:bg-white/20 transition-all shadow-md hover:shadow-lg text-sm"
                 >
                   <History size={18} />
-                  View History
+                  View Project Insights
                 </motion.button>
               )}
               {step === 3 && (
@@ -205,9 +205,9 @@ function App() {
               ].map((s, index) => (
                 <React.Fragment key={s.num}>
                   <div className={`flex items-center gap-2 whitespace-nowrap ${step >= s.num ? 'text-white' : 'text-purple-300'}`}>
-                    <motion.div 
+                    <motion.div
                       initial={false}
-                      animate={{ 
+                      animate={{
                         scale: step === s.num ? 1.1 : 1,
                         backgroundColor: step > s.num ? 'rgba(255,255,255,1)' : (step === s.num ? 'rgba(255,255,255,0)' : 'rgba(255,255,255,0)')
                       }}
@@ -219,7 +219,7 @@ function App() {
                   </div>
                   {index < 2 && (
                     <div className="h-0.5 w-8 md:w-16 mx-1 md:mx-0 overflow-hidden rounded-full bg-purple-400/30">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: '0%' }}
                         animate={{ width: step > s.num ? '100%' : '0%' }}
                         transition={{ duration: 0.5 }}
@@ -237,7 +237,7 @@ function App() {
       <div className="w-full max-w-[2000px] mx-auto px-4 sm:px-6 py-12 relative">
         <AnimatePresence mode="wait">
           {error && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}

@@ -1,11 +1,17 @@
 # Standard Python libraries
+# Standard Python libraries
 import os
 import csv
 import json
 from datetime import datetime
+import sys
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(BASE_DIR)))
+
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 DB_PATH = os.path.join(PROJECT_ROOT, 'Database', 'grades.db')
 MODEL_PATH = os.path.join(PROJECT_ROOT, 'Training', 'best_model.pkl')
 
@@ -42,12 +48,25 @@ model = None
 
 
 def load_model():
+    """Load the trained ML model for inference.
+    
+    This function is responsible ONLY for loading the best_model.pkl file
+    for prediction purposes. It does NOT depend on any metrics files.
+    """
     global model
     try:
+        if not os.path.exists(MODEL_PATH):
+            raise FileNotFoundError(f"Model file not found: {MODEL_PATH}")
+        
         model = joblib.load(MODEL_PATH)
-        print("Model loaded successfully")
+        print(f"Model loaded successfully from: {MODEL_PATH}")
+        print(f"Model type: {type(model).__name__}")
+    except FileNotFoundError as e:
+        print(f"ERROR: {e}")
+        print("Please ensure the model has been trained and saved as best_model.pkl")
+        model = None
     except Exception as e:
-        print(f"Error loading model: {e}")
+        print(f"ERROR loading model: {e}")
         model = None
 
 
@@ -64,33 +83,30 @@ def get_db_connection():
         return None
 
 
-def get_feature_importance_from_model():
-    """Extract feature importance from the trained model if available."""
+def load_model_metrics():
+    """Load model metrics for dashboard display.
+    
+    This function is responsible ONLY for loading model_metrics.json
+    for evaluation and reporting purposes. It has NO impact on predictions.
+    
+    Returns:
+        dict: Model metrics data or None if file not found
+    """
+    metrics_path = os.path.join(PROJECT_ROOT, "Training", "model_metrics.json")
+    
     try:
-        if model is None:
-            return []
+        if not os.path.exists(metrics_path):
+            print(f"Metrics file not found: {metrics_path}")
+            return None
         
-        if hasattr(model, "feature_importances_"):
-            feature_names = ["Calculus-1", "Calculus-2", "Python-1", "Python-2", "SM-1"]
-            importance_values = model.feature_importances_
-            
-            # Convert to percentage and pair with feature names
-            feature_importance = []
-            for i, (name, importance) in enumerate(zip(feature_names, importance_values)):
-                if i < len(importance_values):
-                    feature_importance.append({
-                        "name": name,
-                        "importance": float(importance * 100)
-                    })
-            
-            # Sort by importance (descending)
-            feature_importance.sort(key=lambda x: x["importance"], reverse=True)
-            return feature_importance
+        with open(metrics_path, 'r') as f:
+            metrics = json.load(f)
         
-        return []
+        print(f"Model metrics loaded successfully from: {metrics_path}")
+        return metrics
     except Exception as e:
-        print(f"Error extracting feature importance: {e}")
-        return []
+        print(f"ERROR loading model metrics: {e}")
+        return None
 
 
 def get_dataset_statistics(dataset_path):
@@ -99,7 +115,12 @@ def get_dataset_statistics(dataset_path):
         if not os.path.exists(dataset_path):
             return None
         
-        df = pd.read_csv(dataset_path)
+        try:
+            df = pd.read_csv(dataset_path, on_bad_lines='skip', engine='python')
+            print(f"Dataset loaded successfully in get_statistics: {len(df)} valid rows")
+        except Exception as e:
+            print(f"Error loading dataset in get_statistics: {e}")
+            return None
         
         # Look for percentile column
         percentile_col = None
@@ -221,22 +242,27 @@ def register_student(request: StudentRegistrationRequest):
         os.makedirs(dataset_dir, exist_ok=True)
         
         csv_path = os.path.join(dataset_dir, "Student_Dataset.csv")
-        file_exists = os.path.exists(csv_path)
         
-        with open(csv_path, 'a', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                # Write header if file does not exist
-                writer.writerow([
-                    "Name", "Roll No", "Branch", "Python-1", "SQL", "Calculus-1",
-                    "Python-2", "Hackathon-1", "Calculus-2", "SM-1",
-                    "Linear Algebra", "Discrete Mathematics", "Hackathon-2",
-                    "DSA", "SM-2"
-                ])
-            writer.writerow([
-                request.full_name, new_roll, request.branch,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-            ])
+        student_data = {
+            "Name": request.full_name,
+            "Roll No": new_roll,
+            "Branch": request.branch,
+            "Python-1": 0,
+            "SQL": 0,
+            "Calculus-1": 0,
+            "Python-2": 0,
+            "Hackathon-1": 0,
+            "Calculus-2": 0,
+            "SM-1": 0,
+            "Linear Algebra": 0,
+            "Discrete Mathematics": 0,
+            "Hackathon-2": 0,
+            "DSA": 0,
+            "SM-2": 0
+        }
+        
+        if not append_student_row_safe(csv_path, student_data):
+            raise Exception("Failed to append student to CSV")
             
         print(f"Successfully registered student {new_roll}")
         return {
@@ -313,13 +339,20 @@ def predict(request: PredictionRequest):
             "DSA": [request.scores.dsa],
         })
 
-        # Make prediction using loaded ML model or Mock Fallback
+        # Make prediction using loaded ML model
         if model is None:
-            print("WARNING: Model not found. Returning a mock prediction.")
-            total_score = sum([request.scores.python_1, request.scores.sql, request.scores.calculus_1, request.scores.python_2, request.scores.hackathon_1, request.scores.calculus_2, request.scores.sm_1, request.scores.linear_algebra, request.scores.discrete_mathematics, request.scores.hackathon_2, request.scores.dsa])
-            prediction = total_score / 11.0
-        else:
+            raise HTTPException(
+                status_code=503, 
+                detail="Model not available. Please ensure the model has been trained and loaded."
+            )
+        
+        try:
             prediction = float(model.predict(input_data)[0])
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Model prediction failed: {str(e)}"
+            )
 
         # Ensure prediction is within valid percentile range
         prediction = max(0, min(100, prediction))
@@ -358,7 +391,31 @@ def predict(request: PredictionRequest):
         lower = max(0, prediction - 5)
         upper = min(100, prediction + 5)
         
-        # Save prediction to database
+        # Save prediction to database and add student to dataset
+        assigned_roll = ""
+        try:
+            # Add student to dataset and retrain model
+            assigned_roll = add_student_and_retrain(
+                name                 = request.profile.full_name,
+                branch               = request.profile.branch,
+                python_1             = request.scores.python_1,
+                sql                  = request.scores.sql,
+                calculus_1           = request.scores.calculus_1,
+                python_2             = request.scores.python_2,
+                hackathon_1          = request.scores.hackathon_1,
+                calculus_2           = request.scores.calculus_2,
+                sm_1                 = request.scores.sm_1,
+                linear_algebra       = request.scores.linear_algebra,
+                discrete_mathematics = request.scores.discrete_mathematics,
+                hackathon_2          = request.scores.hackathon_2,
+                dsa                  = request.scores.dsa,
+                predicted_sm2        = prediction
+            )
+        except Exception as pipeline_error:
+            print(f"Pipeline error (non-critical): {pipeline_error}")
+            # Continue with response even if pipeline fails
+
+        # Save prediction to predictions table
         try:
             conn = get_db_connection()
             if conn:
@@ -372,7 +429,7 @@ def predict(request: PredictionRequest):
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (
                     request.profile.full_name,
-                    "",
+                    assigned_roll,
                     request.profile.branch,
                     round(prediction, 2),
                     round(confidence, 2),
@@ -392,13 +449,14 @@ def predict(request: PredictionRequest):
             "confidence": float(round(confidence, 2)),
             "percentile_range": f"{round(lower)}-{round(upper)}",
             "student_name": request.profile.full_name,
+            "roll_number": assigned_roll,
             "profile": request.profile.dict(),
             "scores": request.scores.dict(),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
-
+# ... (rest of the code remains the same)
 @app.get("/api/predictions")
 def get_predictions():
     """Fetch all prediction records from the database."""
@@ -444,9 +502,203 @@ def health():
     return {"status": "API running"}
 
 
+def append_student_row_safe(dataset_path, student_data):
+    """Safely append a student row to the dataset CSV with explicit column mapping.
+    
+    Args:
+        dataset_path: Path to the CSV file
+        student_data: Dictionary with keys matching the exact column order
+    
+    Expected columns in order:
+    ["Name", "Roll No", "Branch", "Python-1", "SQL", "Calculus-1", 
+     "Python-2", "Hackathon-1", "Calculus-2", "SM-1", 
+     "Linear Algebra", "Discrete Mathematics", "Hackathon-2", "DSA", "SM-2"]
+    """
+    try:
+        # Ensure dataset directory exists
+        dataset_dir = os.path.dirname(dataset_path)
+        os.makedirs(dataset_dir, exist_ok=True)
+        
+        file_exists = os.path.exists(dataset_path)
+        
+        with open(dataset_path, 'a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            
+            if not file_exists:
+                # Write header if file does not exist
+                writer.writerow([
+                    "Name", "Roll No", "Branch", "Python-1", "SQL", "Calculus-1",
+                    "Python-2", "Hackathon-1", "Calculus-2", "SM-1",
+                    "Linear Algebra", "Discrete Mathematics", "Hackathon-2",
+                    "DSA", "SM-2"
+                ])
+            
+            # Write row in exact column order with explicit mapping
+            writer.writerow([
+                student_data.get("Name", "N/A"),
+                student_data.get("Roll No", "N/A"), 
+                student_data.get("Branch", "N/A"),
+                student_data.get("Python-1", 0),
+                student_data.get("SQL", 0),
+                student_data.get("Calculus-1", 0),
+                student_data.get("Python-2", 0),
+                student_data.get("Hackathon-1", 0),
+                student_data.get("Calculus-2", 0),
+                student_data.get("SM-1", 0),
+                student_data.get("Linear Algebra", 0),
+                student_data.get("Discrete Mathematics", 0),
+                student_data.get("Hackathon-2", 0),
+                student_data.get("DSA", 0),
+                student_data.get("SM-2", 0)
+            ])
+        
+        print(f"Safely appended student row: {student_data.get('Name', 'Unknown')} ({student_data.get('Roll No', 'N/A')})")
+        return True
+        
+    except Exception as e:
+        print(f"Error appending student row: {e}")
+        return False
+
+
+def repair_dataset_csv(csv_path):
+    """Detect and repair misaligned rows in the dataset CSV with improved logic."""
+    try:
+        df = pd.read_csv(csv_path, on_bad_lines='skip', engine='python')
+        print(f"Loaded dataset for repair: {len(df)} rows")
+        
+        # Detect misaligned rows where Name looks like a roll number
+        repaired_rows = []
+        misaligned_count = 0
+        
+        for index, row in df.iterrows():
+            # Check if Name column contains a roll number pattern
+            name_value = str(row.get('Name', '')).strip()
+            roll_no_value = str(row.get('Roll No', '')).strip()
+            
+            # Detect misalignment: Name looks like roll number AND Roll No looks like branch
+            if (name_value.startswith('STU') and len(name_value) == 8 and 
+                ('B.Tech' in roll_no_value or 'M.Tech' in roll_no_value or roll_no_value in ['CSE', 'AIML', 'AIDS', 'CSBS', 'IT', 'ECE', 'EEE', 'MECH', 'CIVIL'])):
+                
+                # This row is misaligned - shift values to correct positions
+                misaligned_count += 1
+                print(f"Repairing misaligned row {index}: Name='{name_value}', Roll No='{roll_no_value}'")
+                
+                # Create corrected row by shifting values
+                corrected_row = {
+                    'Name': 'Unknown Student',  # We lost the original name
+                    'Roll No': name_value,      # Move roll number to correct position
+                    'Branch': roll_no_value,    # Move branch to correct position
+                }
+                
+                # Shift remaining values from the original row
+                # Original: [STU1002, B.Tech AIDS, 0, 0, 0, ...]
+                # Should be: [Unknown Student, STU1002, B.Tech AIDS, 0, 0, 0, ...]
+                subject_columns = ['Python-1', 'SQL', 'Calculus-1', 'Python-2', 'Hackathon-1',
+                                 'Calculus-2', 'SM-1', 'Linear Algebra', 'Discrete Mathematics',
+                                 'Hackathon-2', 'DSA', 'SM-2']
+                
+                # Map the remaining columns (skip the first 3 which we already handled)
+                original_columns = list(df.columns)
+                for i, subject in enumerate(subject_columns):
+                    if i + 3 < len(original_columns):
+                        corrected_row[subject] = row.get(original_columns[i + 3], 0)
+                    else:
+                        corrected_row[subject] = 0
+                
+                repaired_rows.append(corrected_row)
+            else:
+                # Row is correctly aligned
+                repaired_rows.append(row.to_dict())
+        
+        if misaligned_count > 0:
+            print(f"Found and repaired {misaligned_count} misaligned rows")
+            
+            # Create backup of original file
+            backup_path = csv_path.replace('.csv', '_backup.csv')
+            df.to_csv(backup_path, index=False)
+            print(f"Created backup: {backup_path}")
+            
+            # Save repaired data
+            repaired_df = pd.DataFrame(repaired_rows)
+            repaired_df.to_csv(csv_path, index=False)
+            print(f"Saved repaired dataset: {csv_path}")
+            
+            return True, misaligned_count
+        else:
+            print("No misaligned rows found")
+            return False, 0
+            
+    except Exception as e:
+        print(f"Error repairing CSV: {e}")
+        return False, 0
+
+
+def add_student_and_retrain(name, branch, python_1, sql, calculus_1, python_2, hackathon_1, 
+                          calculus_2, sm_1, linear_algebra, discrete_mathematics, 
+                          hackathon_2, dsa, predicted_sm2):
+    """Add student to dataset CSV with proper CSV formatting and return roll number."""
+    try:
+        # Get next roll number
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute(
+            'SELECT "Roll No" FROM student_grades ORDER BY "Roll No" DESC LIMIT 1'
+        )
+        last_row = cursor.fetchone()
+        
+        if last_row and last_row[0]:
+            try:
+                last_num = int(last_row[0].replace('STU', ''))
+                new_num = last_num + 1
+            except ValueError:
+                new_num = 1
+        else:
+            new_num = 1
+            
+        new_roll = f"STU{new_num:04d}"
+        conn.close()
+        
+        # Append to CSV using safe helper function
+        dataset_dir = os.path.join(PROJECT_ROOT, "Dataset")
+        csv_path = os.path.join(dataset_dir, "Student_Dataset.csv")
+        
+        student_data = {
+            "Name": name,
+            "Roll No": new_roll,
+            "Branch": branch,
+            "Python-1": python_1,
+            "SQL": sql,
+            "Calculus-1": calculus_1,
+            "Python-2": python_2,
+            "Hackathon-1": hackathon_1,
+            "Calculus-2": calculus_2,
+            "SM-1": sm_1,
+            "Linear Algebra": linear_algebra,
+            "Discrete Mathematics": discrete_mathematics,
+            "Hackathon-2": hackathon_2,
+            "DSA": dsa,
+            "SM-2": predicted_sm2
+        }
+        
+        if not append_student_row_safe(csv_path, student_data):
+            raise Exception("Failed to append student to CSV")
+        
+        print(f"Student {name} added to dataset with roll {new_roll}")
+        return new_roll
+        
+    except Exception as e:
+        print(f"Error adding student to dataset: {e}")
+        raise Exception(f"Failed to add student: {str(e)}")
+
+
 @app.get("/dashboard-data")
 def get_dashboard_data():
-    """Return comprehensive dashboard data including dataset info, training details, and model performance."""
+    """Return comprehensive dashboard data including dataset info, training details, and model performance.
+    
+    This endpoint uses model_metrics.json ONLY for displaying model comparison metrics.
+    It does NOT affect model prediction functionality.
+    """
     print("Endpoint called: GET /dashboard-data")
     
     try:
@@ -458,7 +710,19 @@ def get_dashboard_data():
         if not os.path.exists(dataset_path):
             raise HTTPException(status_code=500, detail="Dataset not found")
         
-        df = pd.read_csv(dataset_path)
+        try:
+            df = pd.read_csv(dataset_path, on_bad_lines='skip', engine='python')
+            print(f"Dataset loaded successfully in get_dashboard_data: {len(df)} valid rows")
+            
+            # Check and repair misaligned rows
+            repaired, count = repair_dataset_csv(dataset_path)
+            if repaired:
+                print(f"Repaired {count} misaligned rows, reloading dataset")
+                df = pd.read_csv(dataset_path, on_bad_lines='skip', engine='python')
+                print(f"Dataset reloaded after repair: {len(df)} valid rows")
+        except Exception as e:
+            print(f"Error loading dataset in get_dashboard_data: {e}")
+            raise HTTPException(status_code=500, detail=f"Dataset loading failed: {str(e)}")
         print(f"Dataset shape: {df.shape}")
         print(f"Model loaded: {model is not None}")
         
@@ -501,57 +765,66 @@ def get_dashboard_data():
             "cross_validation": "5-Fold Cross Validation"
         }
         
-        metrics_path = os.path.join(
-            PROJECT_ROOT, "Training", "model_metrics.json"
-        )
-
+        # Load model metrics for dashboard display
+        metrics = load_model_metrics()
+        
         model_performance = []
-        if model is None or not os.path.exists(metrics_path):
+        if metrics is None:
+            # Fallback values when metrics file is not available
+            print("WARNING: Using fallback model performance data")
             model_performance = [{
                 "name": "Linear Regression",
                 "accuracy": 92.0,
                 "rmse": 4.5,
-                "is_best": True
+                "is_best": True,
+                "reason": "Default model - metrics file not found"
             }]
         else:
-            with open(metrics_path) as f:
-                metrics = json.load(f)
+            try:
+                parsed_models = []
+                for result in metrics["all_results"]:
+                    parsed_models.append({
+                        "name": str(result["Model"]),
+                        "r2_raw": float(result["R2"]),
+                        "accuracy": float(result["R2"] * 100),
+                        "rmse": float(result["RMSE"])
+                    })
 
-            parsed_models = []
-            for result in metrics["all_results"]:
-                parsed_models.append({
-                    "name": str(result["Model"]),
-                    "r2_raw": float(result["R2"]),
-                    "accuracy": float(result["R2"] * 100),
-                    "rmse": float(result["RMSE"])
-                })
+                top_models = sorted(parsed_models, key=lambda x: (-x["r2_raw"], x["rmse"]))
+                best_model = top_models[0]
 
-            top_models = sorted(parsed_models, key=lambda x: (-x["r2_raw"], x["rmse"]))
-            best_model = top_models[0]
+                TOL = 1e-5
+                for m in top_models:
+                    if (
+                        abs(m["r2_raw"] - best_model["r2_raw"]) < TOL and 
+                        abs(m["rmse"] - best_model["rmse"]) < TOL
+                    ):
+                        if m["name"] == "Linear Regression":
+                            best_model = m
+                            break
 
-            TOL = 1e-5
-            for m in top_models:
-                if (
-                    abs(m["r2_raw"] - best_model["r2_raw"]) < TOL and 
-                    abs(m["rmse"] - best_model["rmse"]) < TOL
-                ):
-                    if m["name"] == "Linear Regression":
-                        best_model = m
-                        break
-
-            for m in top_models:
-                m["is_best"] = (m["name"] == best_model["name"])
-                
-                # Round only for UI output
-                m["accuracy"] = float(round(m["accuracy"], 2))
-                m["rmse"] = float(round(m["rmse"], 2))
-                
-                if m["is_best"]:
-                    m["reason"] = f"Best based on highest R² ({m['accuracy']}%) and lowest RMSE ({m['rmse']})"
-                
-            model_performance = top_models
+                for m in top_models:
+                    m["is_best"] = (m["name"] == best_model["name"])
+                    
+                    # Round only for UI output
+                    m["accuracy"] = float(round(m["accuracy"], 2))
+                    m["rmse"] = float(round(m["rmse"], 2))
+                    
+                    if m["is_best"]:
+                        m["reason"] = f"Based on highest R² ({m['accuracy']}%) and lowest RMSE ({m['rmse']})"
+                    
+                model_performance = top_models
+            except Exception as e:
+                print(f"Error parsing metrics data: {e}")
+                model_performance = [{
+                    "name": "Error Loading",
+                    "accuracy": 0.0,
+                    "rmse": 0.0,
+                    "is_best": False,
+                    "reason": f"Metrics parsing error: {str(e)}"
+                }]
         
-        # Safe feature importance extraction
+        # Safe feature importance extraction (for display only)
         feature_importance = []
         
         try:
@@ -582,11 +855,52 @@ def get_dashboard_data():
                 {"name": "DSA", "importance": 7.0},
             ]
         
+        # Prepare dataset rows for frontend (return entire dataset)
+        dataset_rows = []
+        try:
+            # Use entire dataset instead of limiting to first 200 rows
+            df_full = df
+            
+            # Convert DataFrame to list of dictionaries
+            for _, row in df_full.iterrows():
+                row_dict = {}
+                # Handle all possible columns with proper fallbacks
+                columns = ["Name", "Roll No", "Branch", "Python-1", "SQL", "Calculus-1",
+                          "Python-2", "Hackathon-1", "Calculus-2", "SM-1", 
+                          "Linear Algebra", "Discrete Mathematics", "Hackathon-2", "DSA", "SM-2"]
+                
+                for col in columns:
+                    if col in row.index and pd.notna(row[col]):
+                        # Convert to appropriate type
+                        if col in ["Name", "Roll No", "Branch"]:
+                            row_dict[col] = str(row[col])
+                        else:
+                            # Numeric columns - convert to float with 2 decimal places
+                            try:
+                                row_dict[col] = float(round(float(row[col]), 2))
+                            except (ValueError, TypeError):
+                                row_dict[col] = 0.0
+                    else:
+                        # Missing columns
+                        if col in ["Name", "Roll No", "Branch"]:
+                            row_dict[col] = "N/A"
+                        else:
+                            row_dict[col] = 0.0
+                
+                dataset_rows.append(row_dict)
+                
+            print(f"Prepared {len(dataset_rows)} dataset rows for frontend")
+            
+        except Exception as e:
+            print(f"Error preparing dataset rows: {e}")
+            dataset_rows = []
+        
         return {
             "dataset": dataset_info,
             "training": training_details,
             "models": model_performance,
-            "feature_importance": feature_importance
+            "feature_importance": feature_importance,
+            "dataset_rows": dataset_rows
         }
         
     except Exception as e:

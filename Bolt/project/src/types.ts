@@ -32,6 +32,8 @@ export interface PredictionResult {
   grade: string;
   confidence: number;
   percentile_range: string;
+  student_name: string;
+  roll_number: string;
   profile: StudentProfile;
   scores: SubjectScores;
 }

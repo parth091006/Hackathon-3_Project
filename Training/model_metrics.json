@@ -1,50 +1,55 @@
 {
+  "model_info": {
+    "best_model_name": "Linear Regression",
+    "selection_criteria": "Lowest RMSE",
+    "dataset_size": 1000,
+    "training_date": "2026-03-25 11:32:59",
+    "feature_count": 11
+  },
   "best_model_name": "Linear Regression",
   "best_r2": -999,
-  "best_rmse": 2.9282,
-  "best_mae": 2.4207,
+  "best_rmse": 25.0181,
+  "best_mae": 20.2413,
   "all_results": [
     {
       "Model": "Linear Regression",
-      "MAE": 2.4207,
-      "RMSE": 2.9282,
-      "R2": 0.967
-    },
-    {
-      "Model": "SVR",
-      "MAE": 2.7812,
-      "RMSE": 3.3635,
-      "R2": 0.9565
+      "MAE": 20.2413,
+      "RMSE": 25.0181,
+      "R2": -0.0146
     },
     {
       "Model": "KNN Regressor",
-      "MAE": 2.9603,
-      "RMSE": 3.6517,
-      "R2": 0.9487
+      "MAE": 21.5965,
+      "RMSE": 26.7233,
+      "R2": -0.1576
     },
     {
       "Model": "Decision Tree",
-      "MAE": 4.6812,
-      "RMSE": 5.9999,
-      "R2": 0.8615
+      "MAE": 23.8753,
+      "RMSE": 30.0259,
+      "R2": -0.4615
     },
     {
       "Model": "Random Forest",
-      "MAE": 3.4191,
-      "RMSE": 4.229,
-      "R2": 0.9312
+      "MAE": 20.3979,
+      "RMSE": 25.1384,
+      "R2": -0.0244
     },
     {
       "Model": "Gradient Boosting",
-      "MAE": 3.0926,
-      "RMSE": 3.811,
-      "R2": 0.9441
-    },
-    {
-      "Model": "Extra Trees",
-      "MAE": 2.9377,
-      "RMSE": 3.64,
-      "R2": 0.949
+      "MAE": 22.0086,
+      "RMSE": 26.8185,
+      "R2": -0.1659
     }
-  ]
+  ],
+  "baseline": {
+    "description": "Initial R2 scores recorded at project baseline (before pipeline growth). Used for Before/After model comparison in dashboard.",
+    "baseline_date": "2026-03-01",
+    "models": {
+      "Ridge": 0.9689,
+      "Linear Regression": 0.9624,
+      "Random Forest": 0.9277,
+      "Decision Tree": 0.8505
+    }
+  }
 }

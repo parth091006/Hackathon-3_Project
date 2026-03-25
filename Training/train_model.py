@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, List
+from datetime import datetime
 
 import joblib
 import numpy as np
@@ -13,12 +13,7 @@ from sklearn.preprocessing import StandardScaler
 
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import (
-    RandomForestRegressor,
-    GradientBoostingRegressor,
-    ExtraTreesRegressor
-)
-from sklearn.svm import SVR
+from sklearn.ensemble import (RandomForestRegressor, GradientBoostingRegressor)
 from sklearn.neighbors import KNeighborsRegressor
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -125,13 +120,6 @@ models = {
         ("model", LinearRegression())
     ]),
 
-
-
-    "SVR": Pipeline([
-        ("scaler", StandardScaler()),
-        ("model", SVR(kernel='rbf', C=100, gamma=0.1, epsilon=0.1))
-    ]),
-
     "KNN Regressor": Pipeline([
         ("scaler", StandardScaler()),
         ("model", KNeighborsRegressor(n_neighbors=5))
@@ -156,13 +144,6 @@ models = {
         n_estimators=200,
         learning_rate=0.1,
         max_depth=5
-    ),
-
-    "Extra Trees": ExtraTreesRegressor(
-        random_state=42,
-        n_estimators=200,
-        max_depth=15,
-        min_samples_leaf=3
     ),
 }
 
@@ -235,7 +216,26 @@ try:
         raise FileNotFoundError("Model file not created!")
 
     metrics_path = os.path.join(script_dir, "model_metrics.json")
+    
+    # Load baseline metrics if available for comparison
+    baseline_path = os.path.join(script_dir, "baseline_metrics.json")
+    baseline_data = None
+    if os.path.exists(baseline_path):
+        try:
+            with open(baseline_path, 'r') as f:
+                baseline_data = json.load(f)
+            print(f"Baseline metrics loaded from: {baseline_path}")
+        except Exception as e:
+            print(f"Warning: Could not load baseline metrics: {e}")
+    
     metrics_data = {
+        "model_info": {
+            "best_model_name": best_model_name,
+            "selection_criteria": "Lowest RMSE",
+            "dataset_size": len(df_ml),
+            "training_date": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "feature_count": len(feature_columns)
+        },
         "best_model_name": best_model_name,
         "best_r2": round(best_r2, 4),
         "best_rmse": round(
@@ -258,6 +258,11 @@ try:
             for r in results_df.to_dict(orient='records')
         ]
     }
+    
+    # Include baseline data if available
+    if baseline_data:
+        metrics_data["baseline"] = baseline_data
+    
     with open(metrics_path, 'w') as f:
         json.dump(metrics_data, f, indent=2)
     print(f"Metrics saved to: {metrics_path}")
