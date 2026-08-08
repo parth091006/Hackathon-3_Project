@@ -1,12 +1,12 @@
 import { motion } from 'framer-motion';
-// @ts-ignore
 import Plot from 'react-plotly.js';
+const PlotComponent = (Plot as any).default || Plot;
 import CountUp from 'react-countup';
 import { Download, Award, TrendingUp, AlertCircle, BarChart2, Lightbulb, ArrowLeft } from 'lucide-react';
 import { useEffect } from 'react';
 import API from '../utils/api';
 import { PredictionResult, Statistics } from '../types';
-import { generatePDF } from '../utils/pdfGenerator';
+import { generatePDF, getGrade } from '../utils/pdfGenerator';
 
 interface Step3ResultsProps {
   result: PredictionResult;
@@ -64,10 +64,6 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
     return cls[grade] || 'from-gray-500 to-gray-600';
   };
 
-  const getGrade = (pct: number) => {
-    if (pct >= 91) return 'A+'; if (pct >= 81) return 'A'; if (pct >= 71) return 'B+';
-    if (pct >= 61) return 'B'; if (pct >= 51) return 'C'; if (pct >= 36) return 'D'; return 'F';
-  };
 
   const currentScores = result?.scores || {};
   const userScores = subjectKeys.map(k => currentScores[k] || 0);
@@ -144,7 +140,7 @@ export default function Step3Results({ result, statistics, onBack }: Step3Result
       {/* Row 2: Subject Comparison bar chart - full width */}
       <motion.div {...hoverLift} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className={cardStyle}>
         <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-3"><BarChart2 className="text-purple-400" /> Subject Comparison</h3>
-        <Plot data={chartData} layout={{ paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#d1d5db', size: 14 }, xaxis: { gridcolor: '#374151', tickangle: -20, tickfont: { size: 12 } }, yaxis: { gridcolor: '#374151', range: [0, 105], tickfont: { size: 12 } }, barmode: 'group', margin: { t: 10, b: 60, l: 60, r: 20 }, legend: { orientation: 'h', y: 1.15, font: { size: 14 } } }} config={{ responsive: true, displayModeBar: false }} style={{ width: '100%', height: '450px' }} />
+        <PlotComponent data={chartData} layout={{ paper_bgcolor: 'transparent', plot_bgcolor: 'transparent', font: { color: '#d1d5db', size: 14 }, xaxis: { gridcolor: '#374151', tickangle: -20, tickfont: { size: 12 } }, yaxis: { gridcolor: '#374151', range: [0, 105], tickfont: { size: 12 } }, barmode: 'group', margin: { t: 10, b: 60, l: 60, r: 20 }, legend: { orientation: 'h', y: 1.15, font: { size: 14 } } }} config={{ responsive: true, displayModeBar: false }} style={{ width: '100%', height: '450px' }} />
       </motion.div>
 
       {/* Row 3: Subject Performance table - full width */}
